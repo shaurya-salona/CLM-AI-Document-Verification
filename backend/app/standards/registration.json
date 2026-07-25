@@ -1,0 +1,16 @@
+{
+  "document_type": "Registration Certificate",
+  "required_fields": [
+    "Company Name",
+    "Registration Number",
+    "Registration Date",
+    "GST Number",
+    "Issuing Authority",
+    "Registered Office Address"
+  ],
+  "validation_rules": {
+    "gst_format": "15-character alphanumeric GSTIN format (e.g. 20AAACB1234C1Z5)",
+    "company_name_match": true,
+    "registration_validity": "Certificate must be active and valid"
+  }
+}

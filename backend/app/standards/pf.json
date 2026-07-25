@@ -1,0 +1,15 @@
+{
+  "document_type": "PF Certificate",
+  "required_fields": [
+    "Employer Name",
+    "PF Code Number",
+    "Registration Date",
+    "EPFO Regional Office",
+    "Coverage Start Date"
+  ],
+  "validation_rules": {
+    "pf_code_format": "Alphanumeric EPFO format (e.g. PY/KRP/0012345/000)",
+    "employer_name_match": true,
+    "expiry_date_present": "Must contain valid coverage duration or active status statement"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "document_type": "Work Order",
+  "required_fields": [
+    "Company Name",
+    "Vendor Name",
+    "Work Order Number",
+    "Issue Date",
+    "Validity Period",
+    "Scope of Work",
+    "Location"
+  ],
+  "validation_rules": {
+    "company_name_match": true,
+    "vendor_name_match": true,
+    "date_format": "YYYY-MM-DD or DD/MM/YYYY",
+    "validity_check": "Work order must not be expired"
+  }
+}

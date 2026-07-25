@@ -1,0 +1,15 @@
+{
+  "document_type": "ESI Certificate",
+  "required_fields": [
+    "Employer Name",
+    "ESI Code Number",
+    "Registration Date",
+    "ESIC Regional Office",
+    "Total Employees Covered"
+  ],
+  "validation_rules": {
+    "esi_code_format": "17-digit numeric ESI Code",
+    "employer_name_match": true,
+    "validity_check": "Must have valid certificate issuance date and clear ESIC seal/signature"
+  }
+}
