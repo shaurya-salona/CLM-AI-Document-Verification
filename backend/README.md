@@ -5,7 +5,7 @@ FastAPI backend for Tata Steel Contract Labor Management (CLM) system with PyMuP
 ## Architecture Highlights
 
 - **Framework**: FastAPI (Python 3.10+)
-- **Database**: SQLite / PostgreSQL (SQLAlchemy ORM)
+- **Database**: PostgreSQL / SQLite (SQLAlchemy ORM + `psycopg2-binary`)
 - **Security**: JWT tokens & Bcrypt password hashing
 - **OCR Engine**: PyMuPDF (`fitz`) for PDF text layer extraction
 - **AI Verification**: 3-Tier Multi-Provider Fallback

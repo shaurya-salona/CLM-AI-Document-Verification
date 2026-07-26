@@ -10,7 +10,7 @@ A complete, full-stack enterprise application built for automating document veri
 
 - **Frontend**: React 18, React Router v6, Axios, Tailwind CSS, Lucide Icons, Vite
 - **Backend**: Python 3.10+, FastAPI, SQLAlchemy ORM, Pydantic, PyJWT, Passlib (bcrypt)
-- **Database**: PostgreSQL / SQLite (`sqlite:///./clm_database.db` default for zero-config local execution)
+- **Database**: PostgreSQL (Production) / SQLite (`sqlite:///./clm_database.db` local default) with `psycopg2-binary` driver
 - **OCR Engine**: PyMuPDF (`fitz`) for PDF text layer extraction
 - **AI Verification Engine**: 
   - **Tier 1**: Google Gemini API (`gemini-2.0-flash`)
