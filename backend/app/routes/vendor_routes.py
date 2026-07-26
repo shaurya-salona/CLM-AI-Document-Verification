@@ -25,10 +25,12 @@ def create_request(
         models.VendorRequest.status == "Pending"
     ).first()
     
-    if existing_pending:
+    # Validate GSTIN format using app.validators.gst_validator
+    from app.validators.gst_validator import validate_gstin_format
+    if payload.gst_number and not validate_gstin_format(payload.gst_number):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"You already have an active pending registration request (Req #{existing_pending.id}). Please wait for approver decision before submitting another."
+            detail="Invalid GSTIN format. GSTIN must be a 15-character statutory alphanumeric code (e.g. 20AAACB1234C1Z5)."
         )
 
     # Fetch assigned approver name

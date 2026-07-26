@@ -100,55 +100,6 @@ EXTRACTED DOCUMENT TEXT:
             logger.warning(f"OpenAI API call failed ({e}). Falling back to Rule-Based AI Engine.")
 
     # 3. Rule-Based Intelligent Fallback Analysis Engine
-    return fallback_ai_verification(doc_type, extracted_text, standard, vendor_details)
+    from app.validators import validate_document
+    return validate_document(doc_type, extracted_text, standard, vendor_details)
 
-
-def fallback_ai_verification(doc_type: str, text: str, standard: Dict[str, Any], vendor_details: Dict[str, Any]) -> Dict[str, Any]:
-    display_doc_name = DOC_TYPE_DISPLAY_MAP.get(doc_type, doc_type)
-    issues = []
-    text_lower = text.lower() if text else ""
-    comp_name = vendor_details.get("company_name", "").lower()
-    gst_num = vendor_details.get("gst_number", "").lower()
-    
-    # 1. Company Name Match Check
-    if comp_name and comp_name not in text_lower:
-        issues.append(f"Company name '{vendor_details.get('company_name')}' not explicitly matched in extracted document text.")
-
-    # 2. Document specific checks
-    if doc_type in ["work_order", "Work Order"]:
-        if "work order" not in text_lower and "order no" not in text_lower and "wo/" not in text_lower:
-            issues.append("Work Order number or formal designation not clearly identified.")
-        if "expiry" not in text_lower and "validity" not in text_lower and "valid till" not in text_lower:
-            issues.append("Validity period or expiration date not explicitly stated.")
-            
-    elif doc_type in ["registration", "Registration Certificate"]:
-        if gst_num and gst_num not in text_lower:
-            issues.append(f"GST Number '{vendor_details.get('gst_number')}' missing from Registration Certificate.")
-        if "registration number" not in text_lower and "reg no" not in text_lower and "cin" not in text_lower:
-            issues.append("Official registration number format could not be verified.")
-
-    elif doc_type in ["pf", "PF Certificate"]:
-        if "pf code" not in text_lower and "epfo" not in text_lower and "estt code" not in text_lower:
-            issues.append("PF Establishment Code / EPFO Number missing or invalid format.")
-        if "expiry" not in text_lower and "coverage" not in text_lower:
-            issues.append("PF Expiry date / coverage period not clearly specified.")
-
-    elif doc_type in ["esi", "ESI Certificate"]:
-        if "esi code" not in text_lower and "esic" not in text_lower and "code no" not in text_lower:
-            issues.append("ESI 17-digit Employer Code number missing.")
-        if "validity" not in text_lower and "date of registration" not in text_lower:
-            issues.append("ESIC registration date or active status stamp missing.")
-
-    confidence = 96 - (len(issues) * 12)
-    if confidence < 50: confidence = 55
-
-    status = "ACTION REQUIRED" if issues else "COMPLIANT"
-    suggestion = "Document complies with basic requirements. Human approver may conduct final verification." if not issues else f"Request updated or clearer copy of {display_doc_name} addressing noted compliance remarks."
-
-    return {
-        "Document": display_doc_name,
-        "Confidence Score": f"{confidence}%",
-        "Compliance Status": status,
-        "Issues Found": issues if issues else ["No critical formatting errors detected in OCR text layer."],
-        "Suggestion": suggestion
-    }
