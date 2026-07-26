@@ -1,39 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-
-class UserBase(BaseModel):
-    name: str
-    email: EmailStr
-    role: str
-    location: Optional[str] = None
-
-class UserCreate(UserBase):
-    password: str
-
-class UserResponse(UserBase):
-    id: int
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: UserResponse
-
-class ApproverOut(BaseModel):
-    id: int
-    name: str
-    location: str
-
-    class Config:
-        from_attributes = True
+from app.schemas.ai import AIRemarkOut
 
 class VendorRequestCreate(BaseModel):
     owner_name: str
@@ -52,17 +20,6 @@ class DocumentOut(BaseModel):
     file_path: str
     file_size: Optional[int] = None
     extracted_text: Optional[str] = None
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-class AIRemarkOut(BaseModel):
-    id: int
-    document_type: str
-    confidence_score: Optional[str] = None
-    compliance_status: Optional[str] = None
-    remarks: str
     created_at: Optional[datetime] = None
 
     class Config:
@@ -89,10 +46,3 @@ class VendorRequestOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-class ApproverDecision(BaseModel):
-    request_id: int
-    remarks: Optional[str] = ""
-
-class AIRemarkGenerateRequest(BaseModel):
-    request_id: int
