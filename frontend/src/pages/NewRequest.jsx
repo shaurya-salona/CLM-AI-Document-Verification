@@ -201,7 +201,7 @@ const NewRequest = () => {
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 transition-all shadow-sm self-start sm:self-auto"
               title="Click to fill sample demo data"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Auto-Fill Test Sample Data
+              <FileCheck className="w-3.5 h-3.5 text-amber-400" /> Auto-Fill Test Sample Data
             </button>
           </div>
 

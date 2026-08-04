@@ -17,7 +17,6 @@ import {
   RefreshCw,
   Search,
   FileText,
-  Sparkles,
   AlertCircle
 } from 'lucide-react';
 
@@ -102,7 +101,7 @@ const ApproverDashboard = () => {
               Site Approver Workstation
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Review vendor registrations, inspect OCR text layer & AI compliance remarks, and approve or reject submissions.
+              Review vendor registrations, inspect OCR text layer & statutory compliance remarks, and render approval decisions.
             </p>
           </div>
 
@@ -189,7 +188,7 @@ const ApproverDashboard = () => {
             <h3 className="font-bold text-white text-base flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-emerald-400" /> {activeTab} Submissions for {user?.location || 'Plant Site'}
             </h3>
-            <span className="text-xs text-slate-400">AI Document Audit Enabled</span>
+            <span className="text-xs text-slate-400">Statutory Verification Active</span>
           </div>
 
           {loading ? (
@@ -233,7 +232,7 @@ const ApproverDashboard = () => {
                     </div>
 
                     <div className="text-xs text-indigo-300 mt-2 flex items-center gap-1.5 font-medium">
-                      <ShieldCheck className="w-4 h-4 text-indigo-400" /> AI Statutory Verification Remarks Ready
+                      <ShieldCheck className="w-4 h-4 text-indigo-400" /> Statutory Compliance Remarks Ready
                     </div>
                   </div>
 
@@ -242,7 +241,7 @@ const ApproverDashboard = () => {
                       to={`/approver/request/${req.id}`}
                       className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-98"
                     >
-                      <Eye className="w-4 h-4" /> Review Request & AI Remarks
+                      <Eye className="w-4 h-4" /> Review Request & Verification Remarks
                     </Link>
                   </div>
                 </div>

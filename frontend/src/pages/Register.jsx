@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -8,15 +8,12 @@ import {
   Lock, 
   Mail, 
   MapPin, 
-  ArrowRight, 
   UserPlus, 
   Building, 
-  UserCheck, 
   Eye, 
   EyeOff, 
   Shield, 
   LockKeyhole, 
-  Sparkles, 
   Award,
   Loader2 
 } from 'lucide-react';
@@ -84,33 +81,23 @@ const FormInput = ({
 };
 
 /* ============================================================================
-   MAIN REGISTER PAGE COMPONENT
+   MAIN REGISTER PAGE COMPONENT (VENDOR ACCOUNT REGISTRATION ONLY)
    ============================================================================ */
 
 const Register = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { login } = useAuth();
-
-  const initialRole = searchParams.get('role') === 'approver' ? 'approver' : 'vendor';
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    role: initialRole,
+    role: 'vendor',
     location: 'Jamshedpur'
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const roleParam = searchParams.get('role');
-    if (roleParam === 'approver' || roleParam === 'vendor') {
-      setFormData((prev) => ({ ...prev, role: roleParam }));
-    }
-  }, [searchParams]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -123,21 +110,15 @@ const Register = () => {
 
     try {
       await authAPI.register(formData);
-      // Auto login after successful registration
-      const user = await login(formData.email, formData.password);
-      if (user.role === 'approver') {
-        navigate('/approver/dashboard');
-      } else {
-        navigate('/vendor/dashboard');
-      }
+      // Auto login after successful vendor registration
+      await login(formData.email, formData.password);
+      navigate('/vendor/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please check your inputs.');
     } finally {
       setLoading(false);
     }
   };
-
-  const isVendorRole = formData.role === 'vendor';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans antialiased selection:bg-sky-500 selection:text-white">
@@ -173,20 +154,18 @@ const Register = () => {
         <div className="glass-panel bg-slate-900/60 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-8 shadow-2xl relative overflow-hidden">
           
           {/* Top Gradient Accent Line */}
-          <div className={`absolute top-0 inset-x-8 h-px bg-gradient-to-r ${isVendorRole ? 'from-transparent via-sky-500/50 to-transparent' : 'from-transparent via-emerald-500/50 to-transparent'}`}></div>
+          <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent"></div>
 
           {/* Form Header */}
           <div className="text-center mb-6">
-            <div className={`w-12 h-12 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-3 ${isVendorRole ? 'bg-gradient-to-tr from-blue-600 to-sky-400 shadow-blue-600/30' : 'bg-gradient-to-tr from-emerald-600 to-teal-400 shadow-emerald-600/30'}`}>
-              {isVendorRole ? <Building className="w-6 h-6 text-white" /> : <UserCheck className="w-6 h-6 text-white" />}
+            <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-3 bg-gradient-to-tr from-blue-600 to-sky-400 shadow-blue-600/30">
+              <Building className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Create {isVendorRole ? 'Vendor Partner' : 'TSL Site Approver'} Profile
+              Register Vendor Partner Profile
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              {isVendorRole 
-                ? 'Register your official Vendor Partner profile to submit compliance documents.' 
-                : 'Register your official TSL Site Approver profile for your assigned plant location.'}
+              Create your vendor partner account to submit compliance documents for Tata Steel site locations.
             </p>
           </div>
 
@@ -199,49 +178,17 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Account Role Selector */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Account Type / Role <span className="text-rose-400">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2.5 p-1 rounded-2xl bg-slate-950/80 border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'vendor' })}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
-                    isVendorRole
-                      ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-sky-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                  }`}
-                >
-                  <Building className="w-3.5 h-3.5" /> Vendor Account
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'approver' })}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
-                    !isVendorRole
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" /> Approver Account
-                </button>
-              </div>
-            </div>
-
             {/* Name Input */}
             <FormInput
               id="name"
               type="text"
-              label={isVendorRole ? "Vendor Company Owner / Contact Person" : "TSL Approver Name"}
+              label="Vendor Company Owner / Contact Person"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={isVendorRole ? "e.g. Ramesh Kumar" : "e.g. Rajesh Sharma"}
+              placeholder="e.g. Ramesh Kumar"
               icon={User}
-              focusRingColor={isVendorRole ? 'focus:ring-sky-500 focus:border-sky-500' : 'focus:ring-emerald-500 focus:border-emerald-500'}
+              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
             />
 
             {/* Email Input */}
@@ -252,9 +199,9 @@ const Register = () => {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={isVendorRole ? "vendor@company.com" : "approver@clm.com"}
+              placeholder="vendor@company.com"
               icon={Mail}
-              focusRingColor={isVendorRole ? 'focus:ring-sky-500 focus:border-sky-500' : 'focus:ring-emerald-500 focus:border-emerald-500'}
+              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
             />
 
             {/* Password Input */}
@@ -267,13 +214,13 @@ const Register = () => {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="Minimum 6 characters"
               icon={Lock}
-              focusRingColor={isVendorRole ? 'focus:ring-sky-500 focus:border-sky-500' : 'focus:ring-emerald-500 focus:border-emerald-500'}
+              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
             />
 
             {/* Plant Location Select */}
             <div className="space-y-1.5">
               <label htmlFor="location" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                {isVendorRole ? "Target Plant Location" : "Assigned Approver Plant Site Location"} <span className="text-rose-400">*</span>
+                Target Plant Site Location <span className="text-rose-400">*</span>
               </label>
               <div className="relative rounded-xl shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -284,7 +231,7 @@ const Register = () => {
                   name="location"
                   value={formData.location}
                   onChange={handleChange}
-                  className={`block w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800/90 rounded-xl text-slate-100 focus:outline-none focus:ring-2 ${isVendorRole ? 'focus:ring-sky-500 focus:border-sky-500' : 'focus:ring-emerald-500 focus:border-emerald-500'} text-sm transition-all duration-300 cursor-pointer`}
+                  className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800/90 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition-all duration-300 cursor-pointer"
                 >
                   {LOCATIONS.map((loc) => (
                     <option key={loc} value={loc} className="bg-slate-900 text-slate-100">{loc}</option>
@@ -298,19 +245,15 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
-                  isVendorRole
-                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-sky-500/25'
-                    : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25'
-                }`}
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-lg shadow-sky-500/25 transition-all duration-300 active:scale-[0.98] cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Creating {isVendorRole ? 'Vendor' : 'Approver'} Account...</span>
+                    <span>Creating Vendor Profile...</span>
                   </>
                 ) : (
-                  <>Complete Registration <UserPlus className="w-4 h-4" /></>
+                  <>Complete Vendor Registration <UserPlus className="w-4 h-4" /></>
                 )}
               </button>
             </div>
@@ -318,7 +261,7 @@ const Register = () => {
 
           {/* Footer Link */}
           <div className="mt-6 pt-4 border-t border-white/[0.06] text-center text-xs text-slate-400">
-            Already have an account?{' '}
+            Already have a vendor account?{' '}
             <Link to="/login" className="text-sky-400 font-semibold hover:text-sky-300 hover:underline transition-colors">
               Sign In to Workspace
             </Link>
