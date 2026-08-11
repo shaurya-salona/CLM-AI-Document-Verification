@@ -2,19 +2,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import settings
 
-# Configure database connection arguments dynamically
+# Configure PostgreSQL connection pooling
 connect_args = {}
-engine_kwargs = {"echo": False}
+engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": True,  # Checks connection health before executing queries
+    "pool_size": 10,        # Maintains up to 10 persistent connections
+    "max_overflow": 20      # Allows up to 20 overflow connections during high traffic
+}
 
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
-else:
-    # Enterprise PostgreSQL Connection Pool Settings
-    engine_kwargs.update({
-        "pool_pre_ping": True,  # Checks connection health before executing queries
-        "pool_size": 10,        # Maintains up to 10 persistent connections
-        "max_overflow": 20      # Allows up to 20 overflow connections during high traffic
-    })
+    engine_kwargs = {"echo": False}
 
 engine = create_engine(
     settings.DATABASE_URL,

@@ -9,6 +9,7 @@ source venv/bin/activate
 uvicorn app.main:app --reload --port 8000 &
 BACKEND_PID=$!
 
+
 echo "🚀 Starting CLM Frontend (Vite)..."
 cd "$DIR/frontend"
 npm run dev &

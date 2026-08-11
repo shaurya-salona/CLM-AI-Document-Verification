@@ -31,9 +31,6 @@ def setup_test_db():
     """
     Base.metadata.create_all(bind=engine)
     yield
-    # File removal is only applicable if a temporary local file-based SQLite database was generated
-    if TEST_DATABASE_URL.startswith("sqlite") and os.path.exists("./test_clm.db"):
-        os.remove("./test_clm.db")
 
 @pytest.fixture
 def db_session():

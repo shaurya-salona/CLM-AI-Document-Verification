@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: CLM-AI-Document-Verification
-    env: python
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: sh start.sh

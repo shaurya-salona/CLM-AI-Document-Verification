@@ -11,7 +11,7 @@ FastAPI backend for Tata Steel Contract Labor Management (CLM) system with PyMuP
 - **OCR Engine**: PyMuPDF (`fitz`) for PDF text layer extraction
 - **AI Verification Engine**: 3-Tier Multi-Provider Fallback
   1. Google Gemini API (`gemini-2.0-flash`)
-  2. OpenAI GPT API (`gpt-4o-mini`)
+  2. OpenAI GPT API (`gpt-4o-mini`);
   3. Built-in Modular Rule-Based Verification Engine (`validators/` package)
 
 ## Setup Instructions
