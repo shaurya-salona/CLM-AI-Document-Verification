@@ -2,7 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI, vendorAPI } from '../services/api';
 import Navbar from '../components/Navbar';
-import { ArrowLeft, Upload, FileCheck, Building, User, Phone, Mail, MapPin, ShieldCheck, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Building, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  ShieldCheck, 
+  FileCheck, 
+  CheckCircle, 
+  AlertCircle,
+  FileText,
+  Upload,
+  Check,
+  Send,
+  HelpCircle
+} from 'lucide-react';
 
 const LOCATIONS = [
   'Jamshedpur',
@@ -12,13 +29,21 @@ const LOCATIONS = [
   'Sukinda'
 ];
 
+const WIZARD_STEPS = [
+  { id: 1, title: 'Plant Site', subtitle: 'Target Location & Approver' },
+  { id: 2, title: 'Company Details', subtitle: 'Owner & GSTIN Info' },
+  { id: 3, title: 'Upload PDFs', subtitle: 'Mandatory Compliance' },
+  { id: 4, title: 'Review & Submit', subtitle: 'Final Inspection' }
+];
+
 const NewRequest = () => {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+
   const [location, setLocation] = useState('Jamshedpur');
   const [approvers, setApprovers] = useState([]);
   const [selectedApproverId, setSelectedApproverId] = useState('');
   
-  // Real use: Start all form fields completely empty
   const [formData, setFormData] = useState({
     owner_name: '',
     company_name: '',
@@ -35,6 +60,7 @@ const NewRequest = () => {
     esi: null
   });
 
+  const [declaration, setDeclaration] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -82,7 +108,8 @@ const NewRequest = () => {
   // Helper for quick testing demo datasets
   const handleAutoFillSamplePDFs = async () => {
     try {
-      setUploadProgress('Loading pre-formatted sample vendor data and sample PDFs...');
+      setError('');
+      setUploadProgress('Auto-filling real sample vendor payload...');
       
       setFormData({
         owner_name: 'Ramesh Kumar',
@@ -110,10 +137,47 @@ const NewRequest = () => {
         esi: esiFile
       });
 
-      setUploadProgress('Sample data attached!');
+      setDeclaration(true);
+      setUploadProgress('Sample vendor payload and 4 PDF documents loaded!');
       setTimeout(() => setUploadProgress(''), 2000);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Step Validation logic
+  const handleNextStep = () => {
+    setError('');
+
+    if (currentStep === 1) {
+      if (!selectedApproverId) {
+        setError(`Please select an Approver for the ${location} site location.`);
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!formData.owner_name.trim() || !formData.company_name.trim() || !formData.address.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.gst_number.trim()) {
+        setError('Please fill in all company information fields before proceeding.');
+        return;
+      }
+      if (formData.gst_number.trim().length !== 15) {
+        setError('GST Number must be exactly 15 characters (e.g. 20AAACB1234C1Z5).');
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (!files.work_order || !files.registration || !files.pf || !files.esi) {
+        setError('You MUST upload all four required PDF documents (Work Order, Registration, PF, and ESI certificates).');
+        return;
+      }
+      setCurrentStep(4);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setError('');
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
     }
   };
 
@@ -121,27 +185,8 @@ const NewRequest = () => {
     e.preventDefault();
     setError('');
 
-    // Real validation 1: Check required fields
-    if (!formData.owner_name.trim() || !formData.company_name.trim() || !formData.address.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.gst_number.trim()) {
-      setError('Please fill in all vendor company and owner information fields.');
-      return;
-    }
-
-    // Real validation 2: GST Number format check (15 chars)
-    if (formData.gst_number.trim().length !== 15) {
-      setError('GST Number must be exactly 15 characters (e.g. 20AAACB1234C1Z5).');
-      return;
-    }
-
-    // Real validation 3: Check selected approver
-    if (!selectedApproverId) {
-      setError(`Please select an Approver for the ${location} site location.`);
-      return;
-    }
-
-    // Real validation 4: Check all 4 files are attached
-    if (!files.work_order || !files.registration || !files.pf || !files.esi) {
-      setError('You MUST upload all four required PDF documents (Work Order, Registration, PF, and ESI certificates).');
+    if (!declaration) {
+      setError('Please check the declaration box to confirm document accuracy.');
       return;
     }
 
@@ -172,185 +217,297 @@ const NewRequest = () => {
     }
   };
 
+  const selectedApproverObj = approvers.find(a => String(a.id) === String(selectedApproverId));
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100 selection:bg-sky-500 selection:text-white">
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <Link to="/vendor/dashboard" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
+        {/* Navigation Top Bar */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/vendor/dashboard" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          </Link>
 
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-2xl">
+          <button
+            type="button"
+            onClick={handleAutoFillSamplePDFs}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/30 transition-all shadow-sm"
+            title="Click to fill sample demo data"
+          >
+            <FileCheck className="w-3.5 h-3.5 text-amber-400" /> Auto-Fill Test Sample Data
+          </button>
+        </div>
+
+        {/* 4-STEP WIZARD PROGRESS STEPPER BAR */}
+        <div className="mb-8 bg-slate-900/60 backdrop-blur-xl border border-white/[0.08] p-4 rounded-2xl shadow-xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {WIZARD_STEPS.map((step) => {
+              const isActive = currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+
+              return (
+                <div 
+                  key={step.id}
+                  onClick={() => {
+                    if (isCompleted) setCurrentStep(step.id);
+                  }}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${
+                    isCompleted ? 'cursor-pointer' : 'cursor-default'
+                  } ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-blue-600/20 to-sky-500/20 border-sky-500/50 shadow-md shadow-sky-500/10' 
+                      : isCompleted 
+                        ? 'bg-emerald-500/10 border-emerald-500/30' 
+                        : 'bg-slate-950/50 border-slate-800/80 opacity-60'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 transition-transform ${
+                    isActive 
+                      ? 'bg-gradient-to-tr from-blue-600 to-sky-400 text-white shadow-md shadow-sky-500/30 scale-105' 
+                      : isCompleted 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {isCompleted ? <Check className="w-4 h-4" /> : step.id}
+                  </div>
+
+                  <div className="truncate">
+                    <span className={`block text-xs font-bold truncate ${isActive ? 'text-white' : isCompleted ? 'text-emerald-300' : 'text-slate-400'}`}>
+                      Step {step.id}: {step.title}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block truncate">{step.subtitle}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MAIN WIZARD CONTAINER CARD */}
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/[0.08] shadow-2xl relative overflow-hidden">
           
-          {/* Form Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
+          {/* Header Title */}
+          <div className="border-b border-slate-800 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                <ShieldCheck className="w-7 h-7 text-indigo-400" /> New Vendor Registration
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-3 py-1 rounded-full border border-sky-500/20">
+                Vendor Onboarding Wizard • Step {currentStep} of 4
+              </span>
+              <h1 className="text-2xl font-extrabold text-white tracking-tight mt-2 flex items-center gap-2">
+                {currentStep === 1 && <MapPin className="w-6 h-6 text-sky-400" />}
+                {currentStep === 2 && <Building className="w-6 h-6 text-indigo-400" />}
+                {currentStep === 3 && <Upload className="w-6 h-6 text-emerald-400" />}
+                {currentStep === 4 && <Send className="w-6 h-6 text-amber-400" />}
+                {WIZARD_STEPS[currentStep - 1].title}
               </h1>
-              <p className="text-sm text-slate-400 mt-1">
-                Enter real company information, pick site approver, and upload 4 compliance PDF documents.
-              </p>
             </div>
-            
-            <button
-              type="button"
-              onClick={handleAutoFillSamplePDFs}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 transition-all shadow-sm self-start sm:self-auto"
-              title="Click to fill sample demo data"
-            >
-              <FileCheck className="w-3.5 h-3.5 text-amber-400" /> Auto-Fill Test Sample Data
-            </button>
           </div>
 
+          {/* Validation Alert */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
+            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-fadeIn">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
+          {/* Progress Toast */}
           {uploadProgress && (
-            <div className="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-sm flex items-center gap-3">
+            <div className="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs flex items-center gap-3 animate-fadeIn">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400"></div>
               <span>{uploadProgress}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Step 1: Location Selection */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-sky-400" /> 1. Select Target Plant / Location Code
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {LOCATIONS.map((loc) => (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => setLocation(loc)}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold text-center border transition-all ${
-                      location === loc
-                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-600/30'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                    }`}
+          {/* =================================================================
+             STEP 1: PLANT SITE & APPROVER SELECTION
+             ================================================================= */}
+          {currentStep === 1 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-sky-400" /> Select Target Plant Site Location Code <span className="text-rose-400">*</span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Choose the primary Tata Steel plant location where labor contract work will be performed.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  {LOCATIONS.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setLocation(loc)}
+                      className={`py-3 px-3 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${
+                        location === loc
+                          ? 'bg-gradient-to-r from-blue-600 to-sky-500 border-sky-400 text-white shadow-lg shadow-sky-500/25'
+                          : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Assigned Site Approver for {location} <span className="text-rose-400">*</span>
+                </label>
+                {approvers.length === 0 ? (
+                  <div className="text-xs text-amber-400 p-3.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    No site approvers registered specifically for location "{location}". The system will assign the default plant approver.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedApproverId}
+                    onChange={(e) => setSelectedApproverId(e.target.value)}
+                    className="w-full px-3.5 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                   >
-                    {loc}
-                  </button>
-                ))}
+                    {approvers.map((appr) => (
+                      <option key={appr.id} value={appr.id} className="bg-slate-900 text-slate-100">
+                        {appr.name} ({appr.location} Site Approver)
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Step 2: Vendor Basic Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Owner / Contact Person Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  name="owner_name"
-                  value={formData.owner_name}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Rajesh Sharma"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+          {/* =================================================================
+             STEP 2: COMPANY PROFILE & STATUTORY DETAILS
+             ================================================================= */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Owner / Contact Person Name <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      name="owner_name"
+                      value={formData.owner_name}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Ramesh Kumar"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Company / Firm Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  name="company_name"
-                  value={formData.company_name}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Apex Infrastructure Ltd"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Company / Firm Name <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      name="company_name"
+                      value={formData.company_name}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Apex Infrastructure Ltd"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Registered Office Address *
-                </label>
-                <input
-                  type="text"
-                  required
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Plot No 42, Industrial Area, Phase-2"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Registered Office Address <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Plot No 42, Industrial Area, Phase-2"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Contact Phone Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="+91 9876543210"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Contact Phone Number <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="+91 9876543210"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Official Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="contact@company.com"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Official Work Email Address <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="email"
+                      required
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="contact@company.com"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  GST Number (GSTIN) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={15}
-                  name="gst_number"
-                  value={formData.gst_number}
-                  onChange={handleInputChange}
-                  placeholder="15-character GSTIN (e.g. 20AAACB1234C1Z5)"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono uppercase"
-                />
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Statutory GST Number (GSTIN) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={15}
+                    name="gst_number"
+                    value={formData.gst_number}
+                    onChange={handleInputChange}
+                    placeholder="15-character GSTIN (e.g. 20AAACB1234C1Z5)"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono uppercase tracking-wider"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Must be exactly 15 statutory alphanumeric characters.</p>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Step 3: Document Uploads (4 mandatory PDFs) */}
-            <div className="pt-4 border-t border-slate-800">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-                2. Upload Four Mandatory Compliance Documents (.pdf only, max 15MB)
-              </label>
+          {/* =================================================================
+             STEP 3: COMPLIANCE DOCUMENTS UPLOAD (4 MANDATORY PDFS)
+             ================================================================= */}
+          {currentStep === 3 && (
+            <div className="space-y-4 animate-fadeIn">
+              <p className="text-xs text-slate-400 mb-2">
+                Upload four mandatory compliance certificates in PDF format (.pdf, maximum 15MB per file).
+              </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* 1. Work Order */}
-                <div className={`p-4 rounded-xl border transition-all ${files.work_order ? 'bg-indigo-950/30 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
+                <div className={`p-4 rounded-2xl border transition-all ${files.work_order ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      1. Work Order PDF *
+                      1. Work Order PDF <span className="text-rose-400">*</span>
                     </span>
                     {files.work_order && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -358,16 +515,16 @@ const NewRequest = () => {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => handleFileChange(e, 'work_order')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
                   />
-                  {files.work_order && <p className="text-[11px] text-indigo-300 mt-1 truncate">Attached: {files.work_order.name}</p>}
+                  {files.work_order && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.work_order.name}</p>}
                 </div>
 
                 {/* 2. Registration Certificate */}
-                <div className={`p-4 rounded-xl border transition-all ${files.registration ? 'bg-indigo-950/30 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
+                <div className={`p-4 rounded-2xl border transition-all ${files.registration ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      2. Registration Certificate PDF *
+                      2. Registration Certificate PDF <span className="text-rose-400">*</span>
                     </span>
                     {files.registration && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -375,16 +532,16 @@ const NewRequest = () => {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => handleFileChange(e, 'registration')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
                   />
-                  {files.registration && <p className="text-[11px] text-indigo-300 mt-1 truncate">Attached: {files.registration.name}</p>}
+                  {files.registration && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.registration.name}</p>}
                 </div>
 
                 {/* 3. PF Certificate */}
-                <div className={`p-4 rounded-xl border transition-all ${files.pf ? 'bg-indigo-950/30 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
+                <div className={`p-4 rounded-2xl border transition-all ${files.pf ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      3. PF Certificate PDF *
+                      3. PF Certificate PDF <span className="text-rose-400">*</span>
                     </span>
                     {files.pf && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -392,16 +549,16 @@ const NewRequest = () => {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => handleFileChange(e, 'pf')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
                   />
-                  {files.pf && <p className="text-[11px] text-indigo-300 mt-1 truncate">Attached: {files.pf.name}</p>}
+                  {files.pf && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.pf.name}</p>}
                 </div>
 
                 {/* 4. ESI Certificate */}
-                <div className={`p-4 rounded-xl border transition-all ${files.esi ? 'bg-indigo-950/30 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
+                <div className={`p-4 rounded-2xl border transition-all ${files.esi ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      4. ESI Certificate PDF *
+                      4. ESI Certificate PDF <span className="text-rose-400">*</span>
                     </span>
                     {files.esi && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -409,50 +566,132 @@ const NewRequest = () => {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => handleFileChange(e, 'esi')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
                   />
-                  {files.esi && <p className="text-[11px] text-indigo-300 mt-1 truncate">Attached: {files.esi.name}</p>}
+                  {files.esi && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.esi.name}</p>}
                 </div>
 
               </div>
             </div>
+          )}
 
-            {/* Step 4: Select Approver */}
-            <div className="pt-4 border-t border-slate-800">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                3. Select Approver for {location} Location *
-              </label>
-              {approvers.length === 0 ? (
-                <div className="text-sm text-amber-400 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                  No registered approvers found specifically for location "{location}". System will assign default site approver.
+          {/* =================================================================
+             STEP 4: SUMMARY REVIEW & FINAL SUBMISSION
+             ================================================================= */}
+          {currentStep === 4 && (
+            <div className="space-y-6 animate-fadeIn">
+              
+              {/* Summary Card */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" /> Vendor Submission Summary Inspection
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 block">Target Plant Site:</span>
+                    <strong className="text-sky-300 text-sm">{location}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Assigned Site Approver:</span>
+                    <strong className="text-emerald-300 text-sm">{selectedApproverObj?.name || 'Assigned Approver'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Company Name:</span>
+                    <strong className="text-white font-semibold">{formData.company_name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Owner / Contact Name:</span>
+                    <strong className="text-white font-semibold">{formData.owner_name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">GSTIN:</span>
+                    <strong className="text-amber-300 font-mono">{formData.gst_number}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Office Address:</span>
+                    <strong className="text-slate-300">{formData.address}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Phone & Email:</span>
+                    <strong className="text-slate-300">{formData.phone} • {formData.email}</strong>
+                  </div>
                 </div>
-              ) : (
-                <select
-                  value={selectedApproverId}
-                  onChange={(e) => setSelectedApproverId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {approvers.map((appr) => (
-                    <option key={appr.id} value={appr.id}>
-                      {appr.name} ({appr.location} Approver)
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
 
-            {/* Submit Button */}
-            <div className="pt-4 border-t border-slate-800">
+                <div className="pt-3 border-t border-slate-800/80">
+                  <span className="text-xs font-semibold text-slate-400 block mb-2">Attached Statutory PDF Certificates:</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> Work Order
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> Registration
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> PF Certificate
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> ESI Certificate
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Declaration Checkbox */}
+              <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={declaration}
+                    onChange={(e) => setDeclaration(e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-500 mt-0.5 cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-300 leading-relaxed">
+                    I hereby declare that all uploaded statutory compliance certificates (Work Order, Registration, PF, and ESI) are genuine, accurate, and valid for Tata Steel contract labor registration.
+                  </span>
+                </label>
+              </div>
+
+            </div>
+          )}
+
+          {/* =================================================================
+             NAVIGATION ACTION BUTTONS (PREVIOUS / NEXT / SUBMIT)
+             ================================================================= */}
+          <div className="pt-6 border-t border-slate-800 flex items-center justify-between gap-4 mt-6">
+            {currentStep > 1 ? (
               <button
-                type="submit"
+                type="button"
+                onClick={handlePrevStep}
                 disabled={loading}
-                className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 shadow-xl shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50 text-base"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {loading ? 'Submitting Registration Documents...' : 'Submit Vendor Registration Request'}
+                <ArrowLeft className="w-4 h-4" /> Previous Step
               </button>
-            </div>
+            ) : (
+              <div></div>
+            )}
 
-          </form>
+            {currentStep < 4 ? (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white shadow-lg shadow-sky-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-98"
+              >
+                Next Step <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-8 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl shadow-emerald-500/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-98"
+              >
+                {loading ? 'Submitting Registration...' : 'Submit Vendor Registration Request 🚀'}
+              </button>
+            )}
+          </div>
+
         </div>
 
       </main>
