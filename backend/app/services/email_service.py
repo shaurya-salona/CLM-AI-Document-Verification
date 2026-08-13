@@ -62,11 +62,17 @@ def send_real_email_otp(recipient_email: str, otp_code: str, purpose: str = "reg
         part = MIMEText(html_content, "html")
         msg.attach(part)
 
-        # Connect to SMTP server via TLS
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.sendmail(msg["From"], recipient_email, msg.as_string())
+        # Try SMTP connection (Port 587 STARTTLS with fallback to Port 465 SSL for cloud environments like Render)
+        try:
+            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                server.sendmail(msg["From"], recipient_email, msg.as_string())
+        except Exception as primary_err:
+            logger.warning(f"[SMTP 587 RETRY] Port 587 failed on cloud host ({primary_err}). Attempting Port 465 SSL fallback...")
+            with smtplib.SMTP_SSL(settings.SMTP_SERVER, 465, timeout=10) as server:
+                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                server.sendmail(msg["From"], recipient_email, msg.as_string())
 
         logger.info(f"[REAL EMAIL SUCCESS] Real OTP Email successfully delivered to {recipient_email} via SMTP ({settings.SMTP_SERVER})!")
         return True
