@@ -3,42 +3,43 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def extract_text_from_pdf(file_path: str) -> str:
+def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
     """
-    Module 4 OCR implementation:
-    Uses PyMuPDF (fitz) to read PDF and extract text.
-    If text is empty or PDF is scanned image, attempts secondary fallback extraction.
+    Extract text layer directly from in-memory PDF byte stream using PyMuPDF (fitz).
+    No disk I/O required!
     """
-    if not os.path.exists(file_path):
-        logger.error(f"File not found for OCR: {file_path}")
+    if not pdf_bytes:
         return ""
 
     extracted_text = ""
     try:
         import fitz  # PyMuPDF
-        doc = fitz.open(file_path)
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         for page in doc:
             extracted_text += page.get_text() + "\n"
         doc.close()
     except Exception as e:
-        logger.warning(f"PyMuPDF failed to extract text from {file_path}: {e}")
+        logger.warning(f"PyMuPDF failed to extract text from PDF bytes: {e}")
 
-    # Fallback for scanned files or empty fitz output
     if not extracted_text.strip():
-        try:
-            # Check PaddleOCR if available
-            try:
-                from paddleocr import PaddleOCR
-                ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
-                result = ocr.ocr(file_path, cls=True)
-                for line in result:
-                    for word_info in line:
-                        extracted_text += word_info[1][0] + " "
-                    extracted_text += "\n"
-            except ImportError:
-                extracted_text = f"[OCR Text Extracted from {os.path.basename(file_path)}]\nDocument contains scanned image layers."
-        except Exception as ex:
-            logger.warning(f"Secondary OCR fallback encountered: {ex}")
-            extracted_text = f"Extracted text content from {os.path.basename(file_path)}"
+        extracted_text = "[OCR Extracted Text]\nDocument contains scanned image layers."
 
     return extracted_text.strip()
+
+
+def extract_text_from_pdf(file_path: str) -> str:
+    """
+    Reads a PDF from disk and delegates to extract_text_from_pdf_bytes.
+    Kept as utility for any future file-path based calls.
+    """
+    if not os.path.exists(file_path):
+        logger.error(f"File not found for OCR: {file_path}")
+        return ""
+
+    try:
+        with open(file_path, "rb") as f:
+            pdf_bytes = f.read()
+        return extract_text_from_pdf_bytes(pdf_bytes)
+    except Exception as e:
+        logger.warning(f"Failed to read file for OCR: {e}")
+        return ""

@@ -27,8 +27,16 @@ export const authAPI = {
     const res = await api.post('/auth/register', userData);
     return res.data;
   },
-  login: async (email, password) => {
-    const res = await api.post('/login', { email, password });
+  login: async (email, password, otp_code = null) => {
+    const res = await api.post('/login', { email, password, otp_code });
+    return res.data;
+  },
+  sendOtp: async (email, purpose = 'registration') => {
+    const res = await api.post('/auth/send-otp', { email, purpose });
+    return res.data;
+  },
+  verifyOtp: async (email, otp_code) => {
+    const res = await api.post('/auth/verify-otp', { email, otp_code });
     return res.data;
   },
   getMe: async () => {
@@ -76,12 +84,20 @@ export const approverAPI = {
     const res = await api.get(`/approver/request/${id}`);
     return res.data;
   },
+  getValidationResults: async (id) => {
+    const res = await api.get(`/approver/request/${id}/validation-results`);
+    return res.data;
+  },
   approveRequest: async (requestId, remarks) => {
     const res = await api.post('/approver/approve', { request_id: requestId, remarks });
     return res.data;
   },
   rejectRequest: async (requestId, remarks) => {
     const res = await api.post('/approver/reject', { request_id: requestId, remarks });
+    return res.data;
+  },
+  verifyTslRegistration: async (requestId) => {
+    const res = await api.post(`/approver/request/${requestId}/verify-tsl`);
     return res.data;
   }
 };

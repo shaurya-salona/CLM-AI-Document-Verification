@@ -13,6 +13,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    is_email_verified: Optional[bool] = False
     created_at: Optional[datetime] = None
 
     class Config:
@@ -21,6 +22,15 @@ class UserResponse(UserBase):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    otp_code: Optional[str] = None # Optional OTP code for 2FA login verification
+
+class SendOTPRequest(BaseModel):
+    email: EmailStr
+    purpose: Optional[str] = "registration" # 'registration' or 'login'
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
 
 class Token(BaseModel):
     access_token: str

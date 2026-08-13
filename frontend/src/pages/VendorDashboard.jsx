@@ -13,12 +13,7 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle, 
-  RefreshCw,
-  ShieldCheck,
-  FileCheck,
-  Award,
-  Sparkles,
-  Info
+  RefreshCw
 } from 'lucide-react';
 
 const VendorDashboard = () => {

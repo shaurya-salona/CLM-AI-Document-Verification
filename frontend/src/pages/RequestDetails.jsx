@@ -4,12 +4,14 @@ import { approverAPI, aiAPI, API_BASE_URL } from '../services/api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import AIRemarksCard from '../components/AIRemarksCard';
-import { ArrowLeft, Building, MapPin, User, Phone, Mail, FileText, CheckCircle2, XCircle, Bot, ShieldAlert, Download, RefreshCw, Eye, X, AlertTriangle } from 'lucide-react';
+import ValidationResultsCard from '../components/ValidationResultsCard';
+import { ArrowLeft, Building, MapPin, User, Phone, Mail, FileText, CheckCircle2, XCircle, Bot, ShieldAlert, Download, RefreshCw, Eye, X, AlertTriangle, Users, Briefcase } from 'lucide-react';
 
 const RequestDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [request, setRequest] = useState(null);
+  const [validationReport, setValidationReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -29,6 +31,8 @@ const RequestDetails = () => {
       if (data.documents && data.documents.length > 0) {
         setSelectedDoc(data.documents[0]);
       }
+      const valReport = await approverAPI.getValidationResults(id);
+      setValidationReport(valReport);
     } catch (err) {
       console.error(err);
     } finally {
@@ -67,6 +71,18 @@ const RequestDetails = () => {
       await approverAPI.rejectRequest(parseInt(id), decisionRemarks);
       await fetchDetails();
       setTimeout(() => navigate('/approver/dashboard'), 800);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyTsl = async () => {
+    setActionLoading(true);
+    try {
+      await approverAPI.verifyTslRegistration(parseInt(id));
+      await fetchDetails();
     } catch (err) {
       console.error(err);
     } finally {
@@ -129,6 +145,9 @@ const RequestDetails = () => {
                 <span className="font-mono text-xs text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 font-semibold">
                   Request #{request.id}
                 </span>
+                <span className="text-xs font-bold text-indigo-300 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                  {request.vendor_type || 'Contractor'}
+                </span>
                 <h1 className="text-2xl font-extrabold text-white tracking-tight">{request.company_name}</h1>
                 <StatusBadge status={request.status} />
               </div>
@@ -148,7 +167,7 @@ const RequestDetails = () => {
           </div>
 
           {/* Vendor Details Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
               <span className="text-slate-500 block mb-0.5">Owner Name</span>
               <strong className="text-white font-semibold text-sm">{request.vendor_name}</strong>
@@ -158,8 +177,12 @@ const RequestDetails = () => {
               <strong className="text-sky-300 font-semibold text-sm">{request.location}</strong>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <span className="text-slate-500 block mb-0.5">Labour Capacity</span>
+              <strong className="text-amber-300 font-mono text-xs">{request.labour_capacity || 1} Workers</strong>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
               <span className="text-slate-500 block mb-0.5">Phone / Email</span>
-              <strong className="text-slate-200 font-semibold block">{request.phone}</strong>
+              <strong className="text-slate-200 font-semibold block truncate">{request.phone}</strong>
               <span className="text-slate-400 text-[11px] truncate block">{request.email}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
@@ -167,19 +190,47 @@ const RequestDetails = () => {
               <strong className="text-amber-300 font-mono text-xs">{request.gst_number || 'N/A'}</strong>
             </div>
           </div>
+
+          {/* TSL Registration Verification Banner */}
+          <div className={`mt-4 p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${request.tsl_registration_verified ? 'bg-emerald-950/20 border-emerald-700/30' : 'bg-amber-950/20 border-amber-700/30'}`}>
+            <div className="flex items-center gap-3">
+              <ShieldAlert className={`w-5 h-5 ${request.tsl_registration_verified ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <div>
+                <p className={`text-sm font-bold ${request.tsl_registration_verified ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  TSL Procurement Registration: {request.tsl_registration_verified ? '✅ VERIFIED' : '⚠️ PENDING VERIFICATION'}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  TSL Vendor Code: <strong className="text-slate-200 font-mono">{request.tsl_vendor_code || 'Not provided'}</strong>
+                  {request.tsl_verification_date && <span className="ml-3 text-emerald-400">· Verified at {new Date(request.tsl_verification_date).toLocaleString()}</span>}
+                </p>
+              </div>
+            </div>
+            {!request.tsl_registration_verified && (
+              <button
+                onClick={handleVerifyTsl}
+                disabled={actionLoading}
+                className="shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Verifying...' : 'Mark TSL Registration Verified'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Main Grid: AI Remarks & Documents Inspection */}
+        {/* Main Grid: Python Validation Engine, AI Remarks & Documents Inspection */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           
-          {/* Left 2 Columns: AI Remarks & Extracted Text */}
+          {/* Left 2 Columns: Validation Results & AI Remarks */}
           <div className="lg:col-span-2 space-y-6">
             
-            <div className="flex items-center justify-between">
+            {/* Deterministic Python Validation Results */}
+            <ValidationResultsCard validationReport={validationReport} />
+
+            <div className="flex items-center justify-between pt-2">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Bot className="w-5 h-5 text-indigo-400" /> AI Document Verification Remarks
               </h3>
-              <span className="text-xs text-slate-400">Rule & Standards Compliant</span>
+              <span className="text-xs text-slate-400">Rule & Standards Advisory Engine</span>
             </div>
 
             {/* AI Remarks List */}
@@ -243,7 +294,8 @@ const RequestDetails = () => {
               {hasDocuments ? (
                 <div className="space-y-2">
                   {request.documents.map((doc) => {
-                    const docUrl = `${API_BASE_URL}/${doc.file_path.replace(/\\/g, '/')}`;
+                    const fallbackUrl = doc.file_path ? `${API_BASE_URL}/${doc.file_path.replace(/\\/g, '/')}` : '';
+                    const pdfSource = doc.file_data || fallbackUrl;
                     const docTitle = doc.document_type.replace('_', ' ').toUpperCase();
                     return (
                       <div key={doc.id} className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
@@ -251,13 +303,13 @@ const RequestDetails = () => {
                           <span className="font-semibold text-xs text-white capitalize block">
                             {doc.document_type.replace('_', ' ')}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-mono truncate block max-w-[140px]">
-                            {doc.file_path.split('/').pop()}
+                          <span className="text-[11px] text-emerald-400 font-mono truncate block max-w-[140px]">
+                            {doc.file_data ? 'Direct DB Storage' : (doc.file_path ? doc.file_path.split('/').pop() : 'DB File')}
                           </span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => openPdfModal(docUrl, docTitle)}
+                          onClick={() => openPdfModal(pdfSource, docTitle)}
                           className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" /> Inspect PDF

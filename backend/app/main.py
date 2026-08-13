@@ -1,7 +1,5 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.services.seed_service import seed_initial_data
@@ -32,9 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Uploads directory for static document viewing/downloading
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Note: All documents are stored as Base64 in PostgreSQL — no static file mount needed
 
 # Include API Routers
 app.include_router(auth_routes.router)

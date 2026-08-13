@@ -4,6 +4,22 @@ from app.validators.workorder_validator import validate_workorder_document
 from app.validators.registration_validator import validate_registration_document
 from app.validators.pf_validator import validate_pf_document
 from app.validators.esi_validator import validate_esi_document
+from app.validators.vendor_validator import (
+    validate_vendor_type,
+    validate_labour_capacity,
+    validate_phone_number,
+    validate_pin_code,
+    validate_pf_code_format,
+    validate_esi_code_format
+)
+from app.validators.cross_reference_validator import (
+    cross_check_pf_codes,
+    cross_check_esi_codes,
+    cross_check_company_name,
+    cross_check_gstin_state_alignment,
+    cross_check_pin_code_region,
+    check_wo_validity_date
+)
 
 DOC_TYPE_DISPLAY_MAP = {
     "work_order": "Work Order",
@@ -61,5 +77,17 @@ __all__ = [
     "validate_registration_document",
     "validate_pf_document",
     "validate_esi_document",
+    "validate_vendor_type",
+    "validate_labour_capacity",
+    "validate_phone_number",
+    "validate_pin_code",
+    "validate_pf_code_format",
+    "validate_esi_code_format",
+    "cross_check_pf_codes",
+    "cross_check_esi_codes",
+    "cross_check_company_name",
+    "cross_check_gstin_state_alignment",
+    "cross_check_pin_code_region",
+    "check_wo_validity_date",
     "validate_document"
 ]

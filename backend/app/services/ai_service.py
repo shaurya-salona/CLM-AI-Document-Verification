@@ -20,7 +20,7 @@ DOC_TYPE_STANDARD_MAP = {
 }
 
 DOC_TYPE_DISPLAY_MAP = {
-    "work_order": "Work Order",
+    "work_order": "Work Order / Purchase Order",
     "registration": "Registration Certificate",
     "pf": "PF Certificate",
     "esi": "ESI Certificate"
@@ -37,14 +37,30 @@ def load_company_standard(doc_type: str) -> Dict[str, Any]:
 def generate_ai_remarks_for_document(doc_type: str, extracted_text: str, vendor_details: Dict[str, Any]) -> Dict[str, Any]:
     standard = load_company_standard(doc_type)
     display_doc_name = DOC_TYPE_DISPLAY_MAP.get(doc_type, doc_type)
+    vendor_type = vendor_details.get("vendor_type", "Contractor")
+    is_contractor = (vendor_type == "Contractor")
+
+    vendor_type_directive = (
+        "VENDOR REGISTRATION TYPE: CONTRACTOR (Labor Contractor)\n"
+        "• Mandatory 4 PDF Certificates: Work Order, Registration, PF Allotment Letter, ESI Allotment Letter.\n"
+        "• Maximum Labour Capacity Limit: 9 labourers.\n"
+        "• Mandatory PF Code & ESI Code statutory verification."
+        if is_contractor else
+        "VENDOR REGISTRATION TYPE: SUPPLIER (Material / Service Supplier)\n"
+        "• Mandatory 2 PDF Certificates: Purchase Order (P.O. / D.O.) and Registration Document.\n"
+        "• Maximum Labour Capacity Limit: 4 labourers.\n"
+        "• Statutory Exemption: PF Code & ESI Code are EXEMPT for Suppliers (PF Flag = No, ESI Flag = No)."
+    )
 
     prompt = f"""
-You are an expert AI Document Auditor for a Contract Labor Management (CLM) System.
-Analyze the following extracted text from a vendor document and compare it against the official Company Standards and Vendor Registration Details.
+You are an expert AI Document Auditor for a Tata Steel Contract Labor Management (CLM) System.
+Analyze the following extracted text from a vendor document and compare it against official Tata Steel Company Standards and Vendor Registration Details.
+
+{vendor_type_directive}
 
 IMPORTANT CONSTRAINTS:
 1. Do NOT state whether the request is approved or rejected.
-2. Do NOT approve or reject the document. Only generate compliance remarks.
+2. Do NOT approve or reject the document. Only generate compliance verification remarks.
 3. Strictly format your output as a single JSON object with these exact key names:
    "Document": "{display_doc_name}",
    "Confidence Score": "e.g. 95%",
@@ -102,4 +118,3 @@ EXTRACTED DOCUMENT TEXT:
     # 3. Rule-Based Intelligent Fallback Analysis Engine
     from app.validators import validate_document
     return validate_document(doc_type, extracted_text, standard, vendor_details)
-

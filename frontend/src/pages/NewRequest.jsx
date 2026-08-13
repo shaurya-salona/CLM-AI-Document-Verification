@@ -18,7 +18,11 @@ import {
   Upload,
   Check,
   Send,
-  HelpCircle
+  HelpCircle,
+  Users,
+  Briefcase,
+  Calendar,
+  FileSpreadsheet
 } from 'lucide-react';
 
 const LOCATIONS = [
@@ -30,9 +34,9 @@ const LOCATIONS = [
 ];
 
 const WIZARD_STEPS = [
-  { id: 1, title: 'Plant Site', subtitle: 'Target Location & Approver' },
-  { id: 2, title: 'Company Details', subtitle: 'Owner & GSTIN Info' },
-  { id: 3, title: 'Upload PDFs', subtitle: 'Mandatory Compliance' },
+  { id: 1, title: 'Plant Site', subtitle: 'Location & Vendor Type' },
+  { id: 2, title: 'Company Details', subtitle: 'Owner & Address Info' },
+  { id: 3, title: 'Compliance PDFs', subtitle: 'Document Uploads' },
   { id: 4, title: 'Review & Submit', subtitle: 'Final Inspection' }
 ];
 
@@ -41,13 +45,35 @@ const NewRequest = () => {
   const [currentStep, setCurrentStep] = useState(1);
 
   const [location, setLocation] = useState('Jamshedpur');
+  const [vendorType, setVendorType] = useState('Contractor'); // 'Contractor' or 'Supplier'
   const [approvers, setApprovers] = useState([]);
   const [selectedApproverId, setSelectedApproverId] = useState('');
   
+  const getOneYearFromToday = () => {
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    return nextYear.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
+    tsl_vendor_code: '',
     owner_name: '',
     company_name: '',
+    nature_of_work: '',
+    labour_capacity: 1,
+    licence_flag: 'No',
+    licence_number: 'N.A.',
+    licence_expiry_date: getOneYearFromToday(),
+    capping_detail: 'NA',
+    ec_policy_doc: '',
+    pf_flag: true,
+    pf_code: '',
+    esi_flag: true,
+    esi_code: '',
     address: '',
+    city: '',
+    state: '',
+    pin_code: '',
     phone: '',
     email: '',
     gst_number: ''
@@ -68,6 +94,19 @@ const NewRequest = () => {
   useEffect(() => {
     fetchApprovers(location);
   }, [location]);
+
+  // Update PF/ESI flags dynamically when Vendor Type changes
+  useEffect(() => {
+    const isContractor = vendorType === 'Contractor';
+    setFormData(prev => ({
+      ...prev,
+      pf_flag: isContractor,
+      esi_flag: isContractor,
+      labour_capacity: isContractor ? Math.min(prev.labour_capacity || 1, 9) : Math.min(prev.labour_capacity || 1, 4),
+      pf_code: isContractor ? prev.pf_code : 'N.A.',
+      esi_code: isContractor ? prev.esi_code : 'N.A.'
+    }));
+  }, [vendorType]);
 
   const fetchApprovers = async (selectedLoc) => {
     try {
@@ -90,12 +129,10 @@ const NewRequest = () => {
   const handleFileChange = (e, docType) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Validation 1: Check File Extension (PDF only)
       if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
         setError(`File "${selectedFile.name}" must be in PDF format (.pdf).`);
         return;
       }
-      // Validation 2: Check File Size (Max 15MB)
       if (selectedFile.size > 15 * 1024 * 1024) {
         setError(`File "${selectedFile.name}" exceeds the maximum 15MB size limit.`);
         return;
@@ -111,24 +148,48 @@ const NewRequest = () => {
       setError('');
       setUploadProgress('Auto-filling real sample vendor payload...');
       
+      const isContractor = vendorType === 'Contractor';
+
       setFormData({
+        tsl_vendor_code: isContractor ? 'TSL/VEND/2026/C/00124' : 'TSL/VEND/2026/S/00087',
         owner_name: 'Ramesh Kumar',
-        company_name: 'Apex Infrastructure Ltd',
-        address: 'Industrial Area, Phase-2, Jamshedpur',
+        company_name: isContractor ? 'Apex Infrastructure Ltd' : 'Tata Metal Supplier Corp',
+        nature_of_work: isContractor ? 'Industrial Civil Fabrication & Maintenance' : 'Steel & Refractory Supply',
+        labour_capacity: isContractor ? 8 : 4,
+        licence_flag: 'No',
+        licence_number: 'N.A.',
+        licence_expiry_date: getOneYearFromToday(),
+        capping_detail: 'NA',
+        ec_policy_doc: 'N/A',
+        pf_flag: isContractor,
+        pf_code: isContractor ? 'PY/KRP/0012345/000' : 'N.A.',
+        esi_flag: isContractor,
+        esi_code: isContractor ? '31000998877665544' : 'N.A.',
+        address: 'Industrial Area, Phase-2',
+        city: 'Jamshedpur',
+        state: 'Jharkhand',
+        pin_code: '831002',
         phone: '+91 9876543210',
-        email: 'ramesh@apexinfra.com',
+        email: 'contact@vendorcorp.com',
         gst_number: '20AAACB1234C1Z5'
       });
 
       const createDummyPdfBlob = (title, content) => {
-        const dummyPdfHeader = `%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj\n4 0 obj << /Length ${content.length + 100} >> stream\nBT /F1 12 Tf 50 700 TD (${title}) Tj 0 -20 TD (${content}) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000214 00000 n \ntrailer << /Size 5 /Root 1 0 R >>\nstartxref\n350\n%%EOF`;
+        const dummyPdfHeader = `%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj\n4 0 obj << /Length ${content.length + 100} >> stream\nBT /F1 12 Tf 50 700 TD (${title}) Tj 0 -20 TD (${content}) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000058 00000 n \n0000000115 00000 n \n0000000214 00000 n \ntrailer << /Size 5 /Root 1 0 R >>\nstartxref\n350\n%%EOF`;
         return new File([dummyPdfHeader], `${title.toLowerCase().replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
       };
 
-      const woFile = createDummyPdfBlob("Work Order", `Work Order Number: WO/2026/JAM/88421\nCompany Name: Apex Infrastructure Ltd\nVendor Name: Ramesh Kumar\nIssue Date: 2026-01-15\nValidity Period: 2026-01-15 to 2027-01-14`);
-      const regFile = createDummyPdfBlob("Registration Certificate", `Registration Number: REG/JH/2024/99120\nCompany Name: Apex Infrastructure Ltd\nGST Number: 20AAACB1234C1Z5\nRegistration Date: 2024-03-10`);
-      const pfFile = createDummyPdfBlob("PF Certificate", `EPFO Regional Office: Jamshedpur\nEmployer Name: Apex Infrastructure Ltd\nPF Code Number: PY/KRP/0012345/000\nRegistration Date: 2023-08-20`);
-      const esiFile = createDummyPdfBlob("ESI Certificate", `ESIC Regional Office: Jamshedpur\nEmployer Name: Apex Infrastructure Ltd\nESI Code Number: 31000998877665544\nRegistration Date: 2023-09-05`);
+      const docLabel = isContractor ? "Work Order" : "Purchase Order";
+      const woFile = createDummyPdfBlob(docLabel, `${docLabel} Number: WO/2026/JAM/88421\nCompany Name: Apex Infrastructure Ltd\nVendor Name: Ramesh Kumar\nValidity: 2026-01-15 to 2027-01-14`);
+      const regFile = createDummyPdfBlob("Registration Certificate", `Registration Number: REG/JH/2024/99120\nGST Number: 20AAACB1234C1Z5`);
+      
+      let pfFile = null;
+      let esiFile = null;
+
+      if (isContractor) {
+        pfFile = createDummyPdfBlob("PF Certificate", `EPFO Office: Jamshedpur\nPF Code Number: PY/KRP/0012345/000`);
+        esiFile = createDummyPdfBlob("ESI Certificate", `ESIC Office: Jamshedpur\nESI Code Number: 31000998877665544`);
+      }
 
       setFiles({
         work_order: woFile,
@@ -138,7 +199,7 @@ const NewRequest = () => {
       });
 
       setDeclaration(true);
-      setUploadProgress('Sample vendor payload and 4 PDF documents loaded!');
+      setUploadProgress('Sample vendor payload loaded successfully!');
       setTimeout(() => setUploadProgress(''), 2000);
     } catch (e) {
       console.error(e);
@@ -151,24 +212,45 @@ const NewRequest = () => {
 
     if (currentStep === 1) {
       if (!selectedApproverId) {
-        setError(`Please select an Approver for the ${location} site location.`);
+        setError(`Please select an assigned Approver for the ${location} plant site.`);
         return;
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
+      const capacityNum = parseInt(formData.labour_capacity || 0);
+      if (vendorType === 'Contractor' && capacityNum > 9) {
+        setError('Contractor Labour Capacity cannot exceed 9.');
+        return;
+      }
+      if (vendorType === 'Supplier' && capacityNum > 4) {
+        setError('Supplier Labour Capacity cannot exceed 4.');
+        return;
+      }
       if (!formData.owner_name.trim() || !formData.company_name.trim() || !formData.address.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.gst_number.trim()) {
-        setError('Please fill in all company information fields before proceeding.');
+        setError('Please fill in all company and owner information fields.');
         return;
       }
       if (formData.gst_number.trim().length !== 15) {
         setError('GST Number must be exactly 15 characters (e.g. 20AAACB1234C1Z5).');
         return;
       }
+      if (vendorType === 'Contractor' && (!formData.pf_code.trim() || !formData.esi_code.trim())) {
+        setError('Contractor registration requires valid PF Code and ESI Code.');
+        return;
+      }
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      if (!files.work_order || !files.registration || !files.pf || !files.esi) {
-        setError('You MUST upload all four required PDF documents (Work Order, Registration, PF, and ESI certificates).');
-        return;
+      const isContractor = vendorType === 'Contractor';
+      if (isContractor) {
+        if (!files.work_order || !files.registration || !files.pf || !files.esi) {
+          setError('Contractors MUST upload all 4 mandatory PDF documents (Work Order, Registration, PF, and ESI certificates).');
+          return;
+        }
+      } else {
+        if (!files.work_order || !files.registration) {
+          setError('Suppliers MUST upload Purchase Order (P.O.) and Registration PDF documents.');
+          return;
+        }
       }
       setCurrentStep(4);
     }
@@ -195,6 +277,7 @@ const NewRequest = () => {
       setUploadProgress('Step 1/3: Registering vendor profile...');
       const reqPayload = {
         ...formData,
+        vendor_type: vendorType,
         location,
         approver_id: parseInt(selectedApproverId)
       };
@@ -218,6 +301,7 @@ const NewRequest = () => {
   };
 
   const selectedApproverObj = approvers.find(a => String(a.id) === String(selectedApproverId));
+  const isContractor = vendorType === 'Contractor';
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100 selection:bg-sky-500 selection:text-white">
@@ -241,7 +325,7 @@ const NewRequest = () => {
           </button>
         </div>
 
-        {/* 4-STEP WIZARD PROGRESS STEPPER BAR */}
+        {/* WIZARD PROGRESS STEPPER BAR */}
         <div className="mb-8 bg-slate-900/60 backdrop-blur-xl border border-white/[0.08] p-4 rounded-2xl shadow-xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {WIZARD_STEPS.map((step) => {
@@ -293,7 +377,7 @@ const NewRequest = () => {
           <div className="border-b border-slate-800 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-3 py-1 rounded-full border border-sky-500/20">
-                Vendor Onboarding Wizard • Step {currentStep} of 4
+                Vendor Onboarding Wizard • Step {currentStep} of 4 ({vendorType})
               </span>
               <h1 className="text-2xl font-extrabold text-white tracking-tight mt-2 flex items-center gap-2">
                 {currentStep === 1 && <MapPin className="w-6 h-6 text-sky-400" />}
@@ -322,17 +406,60 @@ const NewRequest = () => {
           )}
 
           {/* =================================================================
-             STEP 1: PLANT SITE & APPROVER SELECTION
+             STEP 1: SECTION A & B (PLANT LOCATION & VENDOR TYPE)
              ================================================================= */}
           {currentStep === 1 && (
             <div className="space-y-6 animate-fadeIn">
+              
+              {/* Vendor Type Selection (Contractor vs Supplier) */}
               <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Briefcase className="w-4 h-4 text-emerald-400" /> Select Vendor Registration Type <span className="text-rose-400">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setVendorType('Contractor')}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      vendorType === 'Contractor'
+                        ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-xl ring-2 ring-indigo-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-sm text-white">Contractor</span>
+                      {vendorType === 'Contractor' && <CheckCircle className="w-4 h-4 text-indigo-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Labor Contractor. Max 9 labor capacity. Requires Work Order, Registration, PF & ESI Allotment Letters.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVendorType('Supplier')}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      vendorType === 'Supplier'
+                        ? 'bg-sky-950/60 border-sky-500 text-white shadow-xl ring-2 ring-sky-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-sm text-white">Supplier</span>
+                      {vendorType === 'Supplier' && <CheckCircle className="w-4 h-4 text-sky-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Material / Service Supplier. Max 4 labor capacity. Requires P.O. / D.O. and Registration document.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Plant Location Code */}
+              <div className="pt-4 border-t border-slate-800">
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-sky-400" /> Select Target Plant Site Location Code <span className="text-rose-400">*</span>
                 </label>
-                <p className="text-xs text-slate-400 mb-3">
-                  Choose the primary Tata Steel plant location where labor contract work will be performed.
-                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                   {LOCATIONS.map((loc) => (
                     <button
@@ -351,6 +478,7 @@ const NewRequest = () => {
                 </div>
               </div>
 
+              {/* Section G: Approver Selection */}
               <div className="pt-4 border-t border-slate-800">
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
                   Assigned Site Approver for {location} <span className="text-rose-400">*</span>
@@ -377,99 +505,207 @@ const NewRequest = () => {
           )}
 
           {/* =================================================================
-             STEP 2: COMPANY PROFILE & STATUTORY DETAILS
+             STEP 2: SECTIONS B, C, D, E, F (COMPANY & STATUTORY DETAILS)
              ================================================================= */}
           {currentStep === 2 && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-6 animate-fadeIn">
+
+              {/* Section A-0: TSL Procurement Registration (SOP Requirement #1) */}
+              <div className="bg-amber-950/20 border border-amber-700/30 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Tata Steel Registration Verification (Mandatory)</span>
+                </div>
+                <p className="text-xs text-amber-300/70 mb-4">
+                  The vendor must be registered with <strong>Tata Steel Limited (TSL) Procurement</strong> and possess a valid Work Order / Purchase Order before CLM registration. Enter the TSL Vendor Code assigned by Tata Steel Procurement.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    TSL Procurement Vendor Code <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="tsl_vendor_code"
+                    value={formData.tsl_vendor_code}
+                    onChange={handleInputChange}
+                    placeholder="e.g. TSL/VEND/2026/C/00124"
+                    className="block w-full px-3.5 py-2.5 bg-slate-950/70 border border-amber-700/40 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1.5">
+                    The CWR Cell approver will verify this code against Tata Steel's Procurement registration records.
+                  </p>
+                </div>
+              </div>
+
+              {/* Section B: Nature of Work & Labour Capacity */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Nature of Work (per W.O. / P.O.) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    name="nature_of_work"
+                    value={formData.nature_of_work}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Civil Fabrication / Refractory Maintenance"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Labour Capacity (Max {isContractor ? 9 : 4}) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={isContractor ? 9 : 4}
+                    name="labour_capacity"
+                    value={formData.labour_capacity}
+                    onChange={handleInputChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    {isContractor ? 'Contractor limit: Max 9' : 'Supplier limit: Max 4'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Work Order Validity End Date, Capping Detail & Statutory Licence Exemption */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 text-xs">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Licence Expiry Date (W.O. / P.O. End Date) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    name="licence_expiry_date"
+                    value={formData.licence_expiry_date}
+                    onChange={handleInputChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sky-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Capping Detail
+                  </label>
+                  <input
+                    type="text"
+                    name="capping_detail"
+                    value={formData.capping_detail}
+                    onChange={handleInputChange}
+                    placeholder="NA"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <span className="text-[11px] text-slate-400 block mb-1">Labour Licence Status:</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 w-fit">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Statutory Licence Exempt (Capacity ≤ {isContractor ? 9 : 4})
+                  </span>
+                </div>
+              </div>
+
+              {/* Sections C & D: PF & ESI Codes (Contractor mandatory, Supplier N/A) */}
+              {isContractor && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                      PF Code Number (EPFO) <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required={isContractor}
+                      name="pf_code"
+                      value={formData.pf_code}
+                      onChange={handleInputChange}
+                      placeholder="e.g. PY/KRP/0012345/000"
+                      className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                      ESI Code Number (ESIC) <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required={isContractor}
+                      name="esi_code"
+                      value={formData.esi_code}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 31000998877665544"
+                      className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Section E: Vendor Owner & Company Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                     Owner / Contact Person Name <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="text"
-                      required
-                      name="owner_name"
-                      value={formData.owner_name}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Ramesh Kumar"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    name="owner_name"
+                    value={formData.owner_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Ramesh Kumar"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                     Company / Firm Name <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="text"
-                      required
-                      name="company_name"
-                      value={formData.company_name}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Apex Infrastructure Ltd"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Registered Office Address <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="text"
-                      required
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Plot No 42, Industrial Area, Phase-2"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    name="company_name"
+                    value={formData.company_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Apex Infrastructure Ltd"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Contact Phone Number <span className="text-rose-400">*</span>
+                    Contact Phone (10 digits) <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="text"
-                      required
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+91 9876543210"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="+91 9876543210"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Official Work Email Address <span className="text-rose-400">*</span>
+                    Official Email Address <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="email"
-                      required
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="contact@company.com"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    required
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="contact@company.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
                 </div>
 
                 <div className="sm:col-span-2">
@@ -486,28 +722,83 @@ const NewRequest = () => {
                     placeholder="15-character GSTIN (e.g. 20AAACB1234C1Z5)"
                     className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono uppercase tracking-wider"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Must be exactly 15 statutory alphanumeric characters.</p>
                 </div>
               </div>
+
+              {/* Section F: Address Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-800">
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Registered Address <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Plot No 42, Industrial Area, Phase-2"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">City</label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Jamshedpur"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">State</label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="Jharkhand"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">PIN Code (6 digits)</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    name="pin_code"
+                    value={formData.pin_code}
+                    onChange={handleInputChange}
+                    placeholder="831002"
+                    className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
             </div>
           )}
 
           {/* =================================================================
-             STEP 3: COMPLIANCE DOCUMENTS UPLOAD (4 MANDATORY PDFS)
+             STEP 3: DOCUMENT UPLOADS (4 FOR CONTRACTOR, 2 FOR SUPPLIER)
              ================================================================= */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-400 mb-2">
-                Upload four mandatory compliance certificates in PDF format (.pdf, maximum 15MB per file).
+                Upload required compliance certificates in PDF format (.pdf, maximum 15MB per file).
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* 1. Work Order */}
+                {/* 1. Work Order / Purchase Order */}
                 <div className={`p-4 rounded-2xl border transition-all ${files.work_order ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      1. Work Order PDF <span className="text-rose-400">*</span>
+                      1. {isContractor ? 'Work Order PDF' : 'Purchase Order (P.O.) / D.O. PDF'} <span className="text-rose-400">*</span>
                     </span>
                     {files.work_order && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -524,7 +815,7 @@ const NewRequest = () => {
                 <div className={`p-4 rounded-2xl border transition-all ${files.registration ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      2. Registration Certificate PDF <span className="text-rose-400">*</span>
+                      2. Vendor Registration Document PDF <span className="text-rose-400">*</span>
                     </span>
                     {files.registration && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                   </div>
@@ -537,39 +828,43 @@ const NewRequest = () => {
                   {files.registration && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.registration.name}</p>}
                 </div>
 
-                {/* 3. PF Certificate */}
-                <div className={`p-4 rounded-2xl border transition-all ${files.pf ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      3. PF Certificate PDF <span className="text-rose-400">*</span>
-                    </span>
-                    {files.pf && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                {/* 3. PF Certificate (Contractor Only) */}
+                {isContractor && (
+                  <div className={`p-4 rounded-2xl border transition-all ${files.pf ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        3. PF Code Allotment Letter PDF <span className="text-rose-400">*</span>
+                      </span>
+                      {files.pf && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => handleFileChange(e, 'pf')}
+                      className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
+                    />
+                    {files.pf && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.pf.name}</p>}
                   </div>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileChange(e, 'pf')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
-                  />
-                  {files.pf && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.pf.name}</p>}
-                </div>
+                )}
 
-                {/* 4. ESI Certificate */}
-                <div className={`p-4 rounded-2xl border transition-all ${files.esi ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      4. ESI Certificate PDF <span className="text-rose-400">*</span>
-                    </span>
-                    {files.esi && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                {/* 4. ESI Certificate (Contractor Only) */}
+                {isContractor && (
+                  <div className={`p-4 rounded-2xl border transition-all ${files.esi ? 'bg-sky-950/30 border-sky-500/50' : 'bg-slate-950/60 border-slate-800'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        4. ESI Code Allotment Letter PDF <span className="text-rose-400">*</span>
+                      </span>
+                      {files.esi && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => handleFileChange(e, 'esi')}
+                      className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
+                    />
+                    {files.esi && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.esi.name}</p>}
                   </div>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileChange(e, 'esi')}
-                    className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer"
-                  />
-                  {files.esi && <p className="text-[11px] text-sky-300 mt-1.5 truncate">Attached: {files.esi.name}</p>}
-                </div>
+                )}
 
               </div>
             </div>
@@ -589,6 +884,10 @@ const NewRequest = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
+                    <span className="text-slate-500 block">Vendor Type:</span>
+                    <strong className="text-indigo-300 text-sm">{vendorType}</strong>
+                  </div>
+                  <div>
                     <span className="text-slate-500 block">Target Plant Site:</span>
                     <strong className="text-sky-300 text-sm">{location}</strong>
                   </div>
@@ -601,16 +900,28 @@ const NewRequest = () => {
                     <strong className="text-white font-semibold">{formData.company_name}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Owner / Contact Name:</span>
-                    <strong className="text-white font-semibold">{formData.owner_name}</strong>
+                    <span className="text-slate-500 block">Nature of Work:</span>
+                    <strong className="text-slate-200">{formData.nature_of_work || 'N/A'}</strong>
                   </div>
+                  <div>
+                    <span className="text-slate-500 block">Labour Capacity:</span>
+                    <strong className="text-amber-300 font-mono">{formData.labour_capacity} Workers</strong>
+                  </div>
+                  {isContractor && (
+                    <>
+                      <div>
+                        <span className="text-slate-500 block">PF Code:</span>
+                        <strong className="text-emerald-400 font-mono">{formData.pf_code}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">ESI Code:</span>
+                        <strong className="text-emerald-400 font-mono">{formData.esi_code}</strong>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <span className="text-slate-500 block">GSTIN:</span>
                     <strong className="text-amber-300 font-mono">{formData.gst_number}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Office Address:</span>
-                    <strong className="text-slate-300">{formData.address}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Phone & Email:</span>
@@ -622,17 +933,21 @@ const NewRequest = () => {
                   <span className="text-xs font-semibold text-slate-400 block mb-2">Attached Statutory PDF Certificates:</span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                     <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
-                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> Work Order
+                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> {isContractor ? 'Work Order' : 'P.O. / D.O.'}
                     </div>
                     <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
                       <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> Registration
                     </div>
-                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
-                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> PF Certificate
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
-                      <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> ESI Certificate
-                    </div>
+                    {isContractor && (
+                      <>
+                        <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> PF Certificate
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 flex items-center gap-1.5 truncate">
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> ESI Certificate
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -647,7 +962,7 @@ const NewRequest = () => {
                     className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-500 mt-0.5 cursor-pointer"
                   />
                   <span className="text-xs text-slate-300 leading-relaxed">
-                    I hereby declare that all uploaded statutory compliance certificates (Work Order, Registration, PF, and ESI) are genuine, accurate, and valid for Tata Steel contract labor registration.
+                    I hereby declare that all uploaded statutory compliance certificates are genuine, accurate, and valid for Tata Steel contract labor registration.
                   </span>
                 </label>
               </div>

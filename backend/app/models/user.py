@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -12,6 +12,12 @@ class User(Base):
     password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False) # 'vendor' or 'approver'
     location = Column(String(50), nullable=True) # e.g. Jamshedpur, Kalinganagar, West Bokaro
+    
+    # ── OTP & Email Verification (Tata Steel 2FA Security) ─────────────────
+    is_email_verified = Column(Boolean, default=False)
+    otp_code = Column(String(10), nullable=True)
+    otp_expires_at = Column(DateTime, nullable=True)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
 
     vendor_requests = relationship("VendorRequest", foreign_keys="VendorRequest.vendor_id", back_populates="vendor_user")

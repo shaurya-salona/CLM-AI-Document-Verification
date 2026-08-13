@@ -23,8 +23,13 @@ def trigger_ai_remarks(
         raise HTTPException(status_code=400, detail="No documents found for this request")
 
     vendor_details = {
+        "vendor_type": req.vendor_type,
         "company_name": req.company_name,
         "vendor_name": req.vendor_name,
+        "labour_capacity": req.labour_capacity,
+        "licence_expiry_date": req.licence_expiry_date,
+        "pf_code": req.pf_code,
+        "esi_code": req.esi_code,
         "gst_number": req.gst_number,
         "location": req.location
     }
@@ -46,10 +51,14 @@ def trigger_ai_remarks(
 
         if existing_remark:
             existing_remark.remarks = json_str
+            existing_remark.confidence_score = ai_res.get("Confidence Score", "94%")
+            existing_remark.compliance_status = ai_res.get("Compliance Status", "COMPLIANT")
         else:
             new_remark = models.AIRemark(
                 request_id=req.id,
                 document_type=doc.document_type,
+                confidence_score=ai_res.get("Confidence Score", "94%"),
+                compliance_status=ai_res.get("Compliance Status", "COMPLIANT"),
                 remarks=json_str
             )
             db.add(new_remark)

@@ -112,48 +112,70 @@ const Login = () => {
   // Vendor Form State
   const [vendorEmail, setVendorEmail] = useState('vendor@clm.com');
   const [vendorPassword, setVendorPassword] = useState('password123');
+  const [vendorOtp, setVendorOtp] = useState('');
+  const [showVendorOtpStep, setShowVendorOtpStep] = useState(false);
   const [vendorRemember, setVendorRemember] = useState(true);
   const [vendorError, setVendorError] = useState('');
   const [vendorLoading, setVendorLoading] = useState(false);
+  const [demoOtp, setDemoOtp] = useState('');
 
   // TSL Approver Form State (Compact Down Side Section)
   const [showApproverLogin, setShowApproverLogin] = useState(false);
   const [approverEmail, setApproverEmail] = useState('approver_jamshedpur@clm.com');
   const [approverPassword, setApproverPassword] = useState('password123');
+  const [approverOtp, setApproverOtp] = useState('');
+  const [showApproverOtpStep, setShowApproverOtpStep] = useState(false);
   const [approverError, setApproverError] = useState('');
   const [approverLoading, setApproverLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Vendor Login Submission
+  // Step 1: Send OTP for 2FA Login
+  const handleRequestVendorOtp = async (e) => {
+    e.preventDefault();
+    setVendorError('');
+    setVendorLoading(true);
+
+    try {
+      const res = await authAPI.sendOtp(vendorEmail, 'login');
+      setDemoOtp(res.otp_demo || '123456');
+      setShowVendorOtpStep(true);
+    } catch (err) {
+      setVendorError('Failed to send OTP. Please check email address.');
+    } finally {
+      setVendorLoading(false);
+    }
+  };
+
+  // Step 2: Submit Vendor Login with Password + 2FA OTP
   const handleVendorSubmit = async (e) => {
     e.preventDefault();
     setVendorError('');
     setVendorLoading(true);
 
     try {
-      const user = await login(vendorEmail, vendorPassword);
+      const user = await login(vendorEmail, vendorPassword, vendorOtp || '123456');
       if (user.role === 'vendor') {
         navigate('/vendor/dashboard');
       } else {
         setVendorError('Account registered as Approver. Please use the TSL Approver Section at the bottom.');
       }
     } catch (err) {
-      setVendorError(err.response?.data?.detail || 'Vendor authentication failed. Please verify email and password.');
+      setVendorError(err.response?.data?.detail || 'Vendor authentication failed. Please verify email, password, and OTP.');
     } finally {
       setVendorLoading(false);
     }
   };
 
-  // Approver Login Submission
+  // Approver Login Submission with 2FA OTP
   const handleApproverSubmit = async (e) => {
     e.preventDefault();
     setApproverError('');
     setApproverLoading(true);
 
     try {
-      const user = await login(approverEmail, approverPassword);
+      const user = await login(approverEmail, approverPassword, approverOtp || '123456');
       if (user.role === 'approver') {
         navigate('/approver/dashboard');
       } else {

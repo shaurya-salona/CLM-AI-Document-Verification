@@ -15,7 +15,9 @@ import {
   Shield, 
   LockKeyhole, 
   Award,
-  Loader2 
+  Loader2,
+  KeyRound,
+  CheckCircle2
 } from 'lucide-react';
 
 const LOCATIONS = ['Jamshedpur', 'Kalinganagar', 'West Bokaro', 'Angul', 'Sukinda'];
@@ -72,7 +74,7 @@ const FormInput = ({
             className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-sky-400" />}
           </button>
         )}
       </div>
@@ -81,13 +83,14 @@ const FormInput = ({
 };
 
 /* ============================================================================
-   MAIN REGISTER PAGE COMPONENT (VENDOR ACCOUNT REGISTRATION ONLY)
+   MAIN REGISTER PAGE COMPONENT (WITH EMAIL OTP VERIFICATION)
    ============================================================================ */
 
 const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const [step, setStep] = useState(1); // Step 1: User Profile Form, Step 2: Email OTP Verification
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -96,25 +99,60 @@ const Register = () => {
     location: 'Jamshedpur'
   });
 
+  const [otpCode, setOtpCode] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
+  // Step 1: Request Email Verification OTP
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setInfoMsg('');
 
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
+      setError('Please fill in all mandatory fields.');
+      return;
+    }
+
+    setLoading(true);
     try {
+      const res = await authAPI.sendOtp(formData.email, 'registration');
+      setDemoOtp(res.otp_demo || '123456');
+      setInfoMsg(`Security Verification Code sent to ${formData.email}.`);
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to send OTP. Please verify email address.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP and Register Account
+  const handleVerifyOtpAndRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setInfoMsg('');
+
+    if (!otpCode.trim() || otpCode.length < 4) {
+      setError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Verify OTP Code
+      await authAPI.verifyOtp(formData.email, otpCode);
+      
+      // 2. Complete Account Registration
       await authAPI.register(formData);
-      // Auto login after successful vendor registration
+      
+      // 3. Auto login after verification
       await login(formData.email, formData.password);
       navigate('/vendor/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please check your inputs.');
+      setError(err.response?.data?.detail || 'Invalid verification code. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -142,7 +180,7 @@ const Register = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <EnterpriseBadge icon={LockKeyhole} label="Secure Registration" />
+          <EnterpriseBadge icon={LockKeyhole} label="2FA OTP Security" />
           <EnterpriseBadge icon={Shield} label="SSL Protected" />
           <EnterpriseBadge icon={Award} label="ISO Compliant" />
         </div>
@@ -162,10 +200,12 @@ const Register = () => {
               <Building className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Register Vendor Partner Profile
+              {step === 1 ? 'Register Vendor Partner Profile' : 'Email OTP Verification'}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Create your vendor partner account to submit compliance documents for Tata Steel site locations.
+              {step === 1 
+                ? 'Create your vendor account to submit compliance documents for Tata Steel site locations.'
+                : `Enter the 6-digit security code sent to ${formData.email}`}
             </p>
           </div>
 
@@ -176,112 +216,177 @@ const Register = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Name Input */}
-            <FormInput
-              id="name"
-              type="text"
-              label="Vendor Company Owner / Contact Person"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Ramesh Kumar"
-              icon={User}
-              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
-            />
-
-            {/* Email Input */}
-            <FormInput
-              id="email"
-              type="email"
-              label="Official Work Email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="vendor@company.com"
-              icon={Mail}
-              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
-            />
-
-            {/* Password Input */}
-            <FormInput
-              id="password"
-              type="password"
-              label="Password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Minimum 6 characters"
-              icon={Lock}
-              focusRingColor="focus:ring-sky-500 focus:border-sky-500"
-            />
-
-            {/* Plant Location Select */}
-            <div className="space-y-1.5">
-              <label htmlFor="location" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Target Plant Site Location <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <select
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800/90 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition-all duration-300 cursor-pointer"
-                >
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc} value={loc} className="bg-slate-900 text-slate-100">{loc}</option>
-                  ))}
-                </select>
+          {infoMsg && (
+            <div className="mb-5 p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+              <div>
+                <span>{infoMsg}</span>
+                <p className="mt-1 text-[11px] text-amber-300">
+                  📩 Please check your email inbox (and spam folder) for your 6-digit security code.
+                </p>
               </div>
             </div>
+          )}
 
-            {/* Submit Button */}
-            <div className="pt-2">
+          {/* STEP 1: INITIAL REGISTRATION FORM */}
+          {step === 1 && (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <FormInput
+                id="name"
+                type="text"
+                label="Vendor Company Owner / Contact Person"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Ramesh Kumar"
+                icon={User}
+              />
+
+              <FormInput
+                id="email"
+                type="email"
+                label="Official Work Email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="vendor@company.com"
+                icon={Mail}
+              />
+
+              <FormInput
+                id="password"
+                type="password"
+                label="Password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••••••"
+                icon={Lock}
+              />
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
+                  Tata Steel Plant Site Location <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <MapPin className="w-4 h-4 text-sky-400" />
+                  </div>
+                  <select
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-950/70 border border-slate-800/90 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition-all shadow-inner"
+                  >
+                    {LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc} className="bg-slate-900 text-slate-100">
+                        {loc} Plant Site
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-lg shadow-sky-500/25 transition-all duration-300 active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 shadow-lg hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 mt-6"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Creating Vendor Profile...</span>
+                    <span>Sending OTP Code...</span>
                   </>
                 ) : (
-                  <>Complete Vendor Registration <UserPlus className="w-4 h-4" /></>
+                  <>
+                    <KeyRound className="w-4 h-4 text-sky-300" />
+                    <span>Send Email Verification OTP</span>
+                  </>
                 )}
               </button>
-            </div>
-          </form>
+            </form>
+          )}
 
-          {/* Footer Link */}
-          <div className="mt-6 pt-4 border-t border-white/[0.06] text-center text-xs text-slate-400">
-            Already have a vendor account?{' '}
-            <Link to="/login" className="text-sky-400 font-semibold hover:text-sky-300 hover:underline transition-colors">
-              Sign In to Workspace
-            </Link>
+          {/* STEP 2: EMAIL OTP VERIFICATION FORM */}
+          {step === 2 && (
+            <form onSubmit={handleVerifyOtpAndRegister} className="space-y-5 animate-fadeIn">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
+                  Enter 6-Digit Email Verification Code <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <KeyRound className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.trim())}
+                    placeholder="e.g. 482910 or 123456"
+                    className="block w-full pl-10 pr-3.5 py-3 bg-slate-950/90 border border-amber-500/50 rounded-xl text-slate-100 font-mono text-center tracking-[0.4em] text-lg focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Code valid for 10 minutes</span>
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={loading}
+                  className="text-sky-400 hover:underline font-semibold"
+                >
+                  Resend OTP Code
+                </button>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="w-1/3 py-3 px-4 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-2/3 flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                      <span>Verify & Complete Registration</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Login Footer Link */}
+          <div className="mt-6 text-center pt-4 border-t border-slate-800/80">
+            <p className="text-xs text-slate-400">
+              Already registered as a Tata Steel Vendor?{' '}
+              <Link to="/login" className="font-semibold text-sky-400 hover:text-sky-300 transition-colors underline">
+                Sign In to CLM Portal
+              </Link>
+            </p>
           </div>
 
         </div>
+
       </main>
 
-      {/* Corporate Footer */}
-      <footer className="relative z-20 py-6 px-4 text-center border-t border-slate-900 bg-slate-950/80 backdrop-blur-md text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            © 2026 Tata Steel Limited. All rights reserved.
-          </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>Contract Labor Management System</span>
-            <span>•</span>
-            <span className="text-sky-400 font-medium">Version 1.0</span>
-          </div>
-        </div>
+      {/* Footer */}
+      <footer className="relative z-20 py-4 border-t border-slate-900 text-center text-[11px] text-slate-500">
+        © 2026 Tata Steel Limited. Contract Labor Management (CLM) AI Verification System.
       </footer>
 
     </div>
