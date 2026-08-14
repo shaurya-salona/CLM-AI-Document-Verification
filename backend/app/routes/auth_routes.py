@@ -45,12 +45,18 @@ def send_otp(payload: schemas.SendOTPRequest, db: Session = Depends(get_db)):
 
     logger.info(f"[CLM OTP SECURITY] Generated 6-digit Email OTP for {email} (Real Email Delivered: {email_sent})")
     
-    return {
+    response_data = {
         "message": f"Security OTP email sent to {email}. Please check your email inbox and enter the 6-digit verification code.",
         "email": email,
         "email_sent_via_smtp": email_sent,
         "expires_in_minutes": 10
     }
+    
+    if not email_sent:
+        response_data["notice"] = f"SMTP Delivery Notice: Real email sending unavailable. Code for {email}: {otp_code}"
+        response_data["otp_demo"] = otp_code
+
+    return response_data
 
 @router.post("/auth/verify-otp")
 def verify_otp(payload: schemas.VerifyOTPRequest, db: Session = Depends(get_db)):

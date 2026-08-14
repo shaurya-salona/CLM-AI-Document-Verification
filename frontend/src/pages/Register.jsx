@@ -119,8 +119,12 @@ const Register = () => {
     setLoading(true);
     try {
       const res = await authAPI.sendOtp(formData.email, 'registration');
-      setDemoOtp(res.otp_demo || '123456');
-      setInfoMsg(`Security Verification Code sent to ${formData.email}.`);
+      if (res.otp_demo) {
+        setDemoOtp(res.otp_demo);
+        setInfoMsg(`OTP Code generated: ${res.otp_demo} (Check inbox or use code above).`);
+      } else {
+        setInfoMsg(`Security Verification Code sent to ${formData.email}. Please check your inbox.`);
+      }
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to send OTP. Please verify email address.');
