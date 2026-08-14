@@ -22,10 +22,7 @@ import {
 
 const LOCATIONS = ['Jamshedpur', 'Kalinganagar', 'West Bokaro', 'Angul', 'Sukinda'];
 
-/* ============================================================================
-   REUSABLE ENTERPRISE UI COMPONENTS
-   ============================================================================ */
-
+// Form Components
 const EnterpriseBadge = ({ icon: Icon, label }) => (
   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-medium text-slate-300 backdrop-blur-md shadow-sm">
     <Icon className="w-3.5 h-3.5 text-sky-400" />
@@ -81,10 +78,6 @@ const FormInput = ({
     </div>
   );
 };
-
-/* ============================================================================
-   MAIN REGISTER PAGE COMPONENT (WITH EMAIL OTP VERIFICATION)
-   ============================================================================ */
 
 const Register = () => {
   const navigate = useNavigate();

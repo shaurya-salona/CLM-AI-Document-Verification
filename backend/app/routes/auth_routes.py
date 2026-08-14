@@ -18,42 +18,36 @@ PENDING_OTPS: Dict[str, Dict[str, Any]] = {}
 @router.post("/auth/send-otp")
 def send_otp(payload: schemas.SendOTPRequest, db: Session = Depends(get_db)):
     """
-    Generates a secure 6-digit numeric OTP and sends real HTML email via SMTP to recipient email.
-    Tata Steel CLM Security Requirement: Strict 2FA Real Email OTP Verification (NO BYPASSES).
+    Generates a 6-digit numeric OTP and sends verification email via SMTP.
     """
     email = payload.email.lower().strip()
     
-    # Generate random 6-digit numeric OTP
     otp_code = str(random.randint(100000, 999999))
     expires_at = datetime.utcnow() + timedelta(minutes=10)
     
-    # Store in pending OTPs cache
     PENDING_OTPS[email] = {
         "otp_code": otp_code,
         "expires_at": expires_at
     }
     
-    # If user already exists in database, update DB record as well
     user = db.query(models.User).filter(models.User.email == email).first()
     if user:
         user.otp_code = otp_code
         user.otp_expires_at = expires_at
         db.commit()
 
-    # Trigger Real SMTP Email Sending to target recipient email address
     email_sent = send_real_email_otp(email, otp_code, payload.purpose or "registration")
 
-    logger.info(f"[CLM OTP SECURITY] Generated 6-digit Email OTP for {email} (Real Email Delivered: {email_sent})")
+    logger.info(f"Generated OTP for {email} (delivered: {email_sent})")
     
     response_data = {
-        "message": f"Security OTP email sent to {email}. Please check your email inbox and enter the 6-digit verification code.",
+        "message": f"Verification code sent to {email}.",
         "email": email,
         "email_sent_via_smtp": email_sent,
         "expires_in_minutes": 10
     }
     
     if not email_sent:
-        response_data["notice"] = f"SMTP Delivery Notice: Real email sending unavailable. Code for {email}: {otp_code}"
         response_data["otp_demo"] = otp_code
 
     return response_data

@@ -21,11 +21,7 @@ import {
   FileCheck
 } from 'lucide-react';
 
-/* ============================================================================
-   REUSABLE ENTERPRISE UI COMPONENTS
-   ============================================================================ */
-
-// 1. Enterprise Badge Component
+// Reusable UI Components
 const EnterpriseBadge = ({ icon: Icon, label }) => (
   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-medium text-slate-300 backdrop-blur-md shadow-sm">
     <Icon className="w-3.5 h-3.5 text-sky-400" />
@@ -33,7 +29,6 @@ const EnterpriseBadge = ({ icon: Icon, label }) => (
   </div>
 );
 
-// 2. Reusable Floating Label Input Component with Password Toggle
 const FormInput = ({ 
   id, 
   type = 'text', 
@@ -83,7 +78,6 @@ const FormInput = ({
   );
 };
 
-// 3. Reusable Enterprise Gradient Button
 const PrimaryButton = ({ 
   loading, 
   children, 
@@ -103,10 +97,6 @@ const PrimaryButton = ({
     ) : children}
   </button>
 );
-
-/* ============================================================================
-   MAIN LOGIN PAGE COMPONENT
-   ============================================================================ */
 
 const Login = () => {
   // Vendor Form State

@@ -405,9 +405,7 @@ const NewRequest = () => {
             </div>
           )}
 
-          {/* =================================================================
-             STEP 1: SECTION A & B (PLANT LOCATION & VENDOR TYPE)
-             ================================================================= */}
+          {/* Step 1: Location & Vendor Type */}
           {currentStep === 1 && (
             <div className="space-y-6 animate-fadeIn">
               
@@ -504,9 +502,7 @@ const NewRequest = () => {
             </div>
           )}
 
-          {/* =================================================================
-             STEP 2: SECTIONS B, C, D, E, F (COMPANY & STATUTORY DETAILS)
-             ================================================================= */}
+          {/* Step 2: Vendor Details */}
           {currentStep === 2 && (
             <div className="space-y-6 animate-fadeIn">
 
@@ -783,9 +779,7 @@ const NewRequest = () => {
             </div>
           )}
 
-          {/* =================================================================
-             STEP 3: DOCUMENT UPLOADS (4 FOR CONTRACTOR, 2 FOR SUPPLIER)
-             ================================================================= */}
+          {/* Step 3: Document Uploads */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-fadeIn">
               <p className="text-xs text-slate-400 mb-2">
@@ -870,9 +864,7 @@ const NewRequest = () => {
             </div>
           )}
 
-          {/* =================================================================
-             STEP 4: SUMMARY REVIEW & FINAL SUBMISSION
-             ================================================================= */}
+          {/* Step 4: Summary Review & Final Submission */}
           {currentStep === 4 && (
             <div className="space-y-6 animate-fadeIn">
               
@@ -970,9 +962,7 @@ const NewRequest = () => {
             </div>
           )}
 
-          {/* =================================================================
-             NAVIGATION ACTION BUTTONS (PREVIOUS / NEXT / SUBMIT)
-             ================================================================= */}
+          {/* Navigation Controls */}
           <div className="pt-6 border-t border-slate-800 flex items-center justify-between gap-4 mt-6">
             {currentStep > 1 ? (
               <button
