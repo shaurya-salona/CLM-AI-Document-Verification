@@ -16,6 +16,6 @@ npm run dev &
 FRONTEND_PID=$!
 
 echo "✅ Backend running on http://localhost:8000 (PID: $BACKEND_PID)"
-echo "✅ Frontend running on http://localhost:5173 (PID: $FRONTEND_PID)"
+echo "✅ Frontend running on http://localhost:3000 (PID: $FRONTEND_PID)"
 
 wait $BACKEND_PID $FRONTEND_PID
