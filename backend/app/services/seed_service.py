@@ -183,7 +183,7 @@ def seed_initial_data(db: Session):
                     file_name=f"{doc_type}.pdf",
                     file_path=file_path,
                     file_size=len(sample_text),
-                    file_data=file_data_url, # Direct PostgreSQL Database PDF storage!
+                    file_data=file_data_url,
                     extracted_text=sample_text
                 )
                 db.add(doc_obj)

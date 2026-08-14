@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
     """
     Extract text layer directly from in-memory PDF byte stream using PyMuPDF (fitz).
-    No disk I/O required!
     """
     if not pdf_bytes:
         return ""

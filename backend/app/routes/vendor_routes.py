@@ -182,12 +182,12 @@ async def upload_documents(
             pdf_bytes = await file_obj.read()
             file_size_bytes = len(pdf_bytes)
 
-            # Convert PDF bytes directly into Base64 Data String stored 100% in PostgreSQL DB (NO LOCAL DISK STORAGE)
+            # Convert PDF bytes to Base64 data string for database storage
             b64_str = base64.b64encode(pdf_bytes).decode('utf-8')
             file_data_url = f"data:application/pdf;base64,{b64_str}"
             db_virtual_path = f"postgresql://documents/{req.id}/{doc_type}"
 
-            # Fast OCR Text Extraction directly from in-memory bytes
+            # Extract text from in-memory bytes
             extracted_text = extract_text_from_pdf_bytes(pdf_bytes)
 
             doc_rec = db.query(models.Document).filter(
@@ -202,7 +202,7 @@ async def upload_documents(
                     file_name=file_obj.filename or filename,
                     file_path=db_virtual_path,
                     file_size=file_size_bytes,
-                    file_data=file_data_url, # Direct 100% PostgreSQL Database PDF Storage!
+                    file_data=file_data_url,
                     extracted_text=extracted_text
                 )
                 db.add(doc_rec)
@@ -210,12 +210,12 @@ async def upload_documents(
                 doc_rec.file_name = file_obj.filename or filename
                 doc_rec.file_path = db_virtual_path
                 doc_rec.file_size = file_size_bytes
-                doc_rec.file_data = file_data_url # Direct 100% PostgreSQL Database PDF Storage!
+                doc_rec.file_data = file_data_url
                 doc_rec.extracted_text = extracted_text
             
             db.commit()
 
-            # Schedule AI Remarks Generation asynchronously in background for 10x FASTER upload speed!
+            # Schedule AI remarks generation in background
             background_tasks.add_task(
                 process_ai_remarks_in_background,
                 req.id,
@@ -227,7 +227,7 @@ async def upload_documents(
             uploaded_docs.append(doc_type)
 
     return {
-        "message": f"Successfully uploaded {len(uploaded_docs)} compliance document(s) directly to PostgreSQL Database in 100ms!",
+        "message": f"Successfully uploaded {len(uploaded_docs)} document(s).",
         "request_id": req.id,
         "uploaded_documents": uploaded_docs
     }

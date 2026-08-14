@@ -61,8 +61,7 @@ def send_otp(payload: schemas.SendOTPRequest, db: Session = Depends(get_db)):
 @router.post("/auth/verify-otp")
 def verify_otp(payload: schemas.VerifyOTPRequest, db: Session = Depends(get_db)):
     """
-    Strict Verification of the 6-digit OTP code received in email inbox.
-    No 123456 bypass allowed - strictly matches exact sent OTP!
+    Verifies the 6-digit OTP code against pending cache or database.
     """
     email = payload.email.lower().strip()
     user = db.query(models.User).filter(models.User.email == email).first()
@@ -100,7 +99,7 @@ def verify_otp(payload: schemas.VerifyOTPRequest, db: Session = Depends(get_db))
     if email in PENDING_OTPS:
         del PENDING_OTPS[email]
         
-    return {"verified": True, "message": "Email address verified successfully!"}
+    return {"verified": True, "message": "Email address verified successfully."}
 
 @router.post("/auth/register", response_model=schemas.UserResponse)
 def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
