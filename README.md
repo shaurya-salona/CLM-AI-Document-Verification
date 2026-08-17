@@ -91,7 +91,7 @@ npm run dev
 | 🖥️ Vendor Portal | http://localhost:3000 |
 | 🔧 Backend API | http://127.0.0.1:8000 |
 | 📖 Swagger Docs | http://127.0.0.1:8000/docs |
-| ☁️ Live Cloud (Render) | https://clm-ai-document-verification.onrender.com |
+| ☁️ Live Cloud (Render) | https://clm-ai-document-verification-1.onrender.com |
 
 ---
 
